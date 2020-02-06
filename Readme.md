@@ -1,4 +1,4 @@
-# LinQ를 공부하는 레파지토리입니다.👑
+# LINQ를 공부하는 레파지토리입니다.👑
 - Chapter01. LINQ의 소개
 
 - Chapter02
