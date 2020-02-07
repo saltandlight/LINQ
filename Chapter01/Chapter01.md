@@ -24,12 +24,43 @@
                                     관계형 DB나 XML 같은 다른 매체에서도 LINQ를 사용하는 방법을 안다는 것과 같은 의미
 
 ### 1.1.2 도구로서의 LINQ
+- 세 가지 형태의 LINQ provider: 
+    - LINQ to Object
+    - LINQ to SQL
+    - LINQ to XML
+- 세 가지 LINQ provider는 독립적으로 단독으로 사용될 수 있고, 복합적으로 사용될 때는 더 강력한 솔루션 제공 가능함
+- 이 프로바이더들은 하나의 공통된 LINQ foundation에서 파생된 변종들
+- LINQ foundation: 질의 연산자, 질의 표현식, 표현식 트리같은 기초적인 시발점을 제공 
+-> LINQ toolset은 더욱 자유로운 확장성 가질 수 있게 됨.
+- 어떤 데이터 출처나 API도 LINQ와 결합 가능함
 
 ### 1.1.3 언어 확장으로서의 LINQ
+- LINQ는 규격화된 질의문법을 통해 다양한 종류의 데이터 저장소에 접근 가능하게 해줌
+- LINQ처럼 선언적인 접근을 하는 경우는 코드가 간결해짐~!
+[LINQ를 사용한 예시]
+```C#
+var contacts =
+    from customer in db.Customers
+    where customer.Name.StartsWith("A") && customer.Orders.Count > 0
+    orderby customer.Name
+    select new { customer.Name, customer.Phone };
 
-
+var xml =  new XElement("contacts",
+               from contact in contacts
+                select new XElement("contact",
+                new XAttribute("name", contact.Name),
+                new XAttribute("phone", contact.Phone)
+                )
+            );
+```
+- LINQ를 사용하지 않을 떄보다 훨씬~~!! 간결하다
+- LINQ는 .NET 언어가 SQL, XSL처럼 저장소에 따라 바뀌는 다양한 형식의 언어로 인해 복잡하게 얽히는 것을 막아줌
 
 ## 1.2 왜 LINQ가 필요한가?
+- 예전에는 SQL이나 DB를 프로그래밍 언어와 이어주는 API 역시 습득해야 완전한 애플리케이션을 작성 가능했음
+(마치 DB와 java 사이에 jsp, php를 사용하는 것처럼)
+- .NET API 이용해서 데이터 액세스하는 코드의 일부분을 찾아볼 것임 
+    -> 문제점을 발견할 수 있을 것(DB와 프로그래밍 언어의 구조상의 불일치)
 ### 1.2.1 일반적인 문제점
 ### 1.2.2 패러다임 간의 불일치에 대한 고찰
 ### 1.2.3 해결사로서의 LINQ
