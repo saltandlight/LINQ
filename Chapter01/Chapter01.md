@@ -62,6 +62,40 @@ var xml =  new XElement("contacts",
 - .NET API 이용해서 데이터 액세스하는 코드의 일부분을 찾아볼 것임 
     -> 문제점을 발견할 수 있을 것(DB와 프로그래밍 언어의 구조상의 불일치)
 ### 1.2.1 일반적인 문제점
+- 애플리케이션에서 DB에 접근할 일이 많기 떄문에 .NET 프레임워크가 저장된 데이터에 접근하기 쉬운 API를 내장할 것이 요구됨
+- .NET 프레임워크 클래스 라이브러리(FCL)은 ADO.NET 이라는 관계형 데이터에 접근, 관계형 데이터를 메모리내에서 나타내는 API를 통해 해법을 제시해왔음
+- API는 SqlConnection, SqlCommand, SqlReader, DataSet, DataTable 과 같은 클래스 등으로 구성됨
+- 문제점: 개발자들이 테이블이나 레코드, 열과같은 관계형 모델의 개념으로서만 메서드를 작성할 수 밖에 없음
+
+- 객체지향 패러다임이 SW 개발의 대세로 자리잡고 있음 -> 개발자는 관계형 DB나 XML처럼 다른 형태로 추상화된 데이터를 객체 모델로 매핑하기 위해 많은 비효율과 비용이 듬
+- LINQ가 목표하던  바: 그러한 압박으로부터 개발자들을 해방시키는 것
+[예제 1.2: 지금까지의 .NET의 데이터 접근 코드]
+```C#
+using (SqlConnection connection = new SqlConnection("..."))
+{
+    connection.Open();
+    SqlCommand command = connection.CreateCommand();
+    command.CommandText = 
+    @"SELECT Name, Country
+      FROM Customers
+      WHERE City = @City";
+    command.Parameters.AddWithValue("@City", "Paris");
+    using(SqlReader reader = command.ExecuteReader())
+    {
+        while(reader.Read())
+        {
+            string name = reader.GetString(0);
+            string country = reader.GetString(1);
+            ...
+        }
+    }
+}
+```
+- 코드의 한계점:
+    - 몇 가지 과정은 필수 -> 불필요하게 코드가 길어짐
+    - 질의가 따옴표 속의 문자열로 표현됨 -> 컴파일 시 검증이 안 됨
+    - while 문 안의 내용이 너무 느슨하게 정의되어 있음(열이 예상하는 형으로 되어있을까? 올바른 개수의 매개변수를 사용한다고 할 수 있을까? 매개변수의 이름이 확실한가?)
+    
 ### 1.2.2 패러다임 간의 불일치에 대한 고찰
 ### 1.2.3 해결사로서의 LINQ
   
