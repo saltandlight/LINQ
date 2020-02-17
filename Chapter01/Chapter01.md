@@ -36,8 +36,10 @@
 
 ### 1.1.3 언어 확장으로서의 LINQ
 - LINQ는 규격화된 질의문법을 통해 다양한 종류의 데이터 저장소에 접근 가능하게 해줌
+
 - LINQ처럼 선언적인 접근을 하는 경우는 코드가 간결해짐~!
-[LINQ를 사용한 예시]
+
+  [LINQ를 사용한 예시]
 ```C#
 var contacts =
     from customer in db.Customers
@@ -94,18 +96,24 @@ using (SqlConnection connection = new SqlConnection("..."))
 ```
 - 코드의 한계점:
     - 몇 가지 과정은 필수 -> 불필요하게 코드가 길어짐
+    
     - 질의가 따옴표 속의 문자열로 표현됨 -> 컴파일 시 검증이 안 됨
+    
     - while 문 안의 내용이 너무 느슨하게 정의되어 있음(열이 예상하는 형으로 되어있을까? 올바른 개수의 매개변수를 사용한다고 할 수 있을까? 매개변수의 이름이 확실한가?)
-    - 사용하는 클래스들이 SQL Server와의 소통에만 사용 가능, 다른 데이터베이스 서버와는 사용하기 힘듬<br> 
-     -> DbConnection 을 사용해서 해결함<br>
-     -> 절반만 해결된 상황... <br>
-     -> SQL은 배포판이나 판매하는 회사에 따라 언어에 추가된 사항이 다르고 데이텨형에도 차이가 있음<br> 
-     => 어떤 DB를 위해 작성된 코드가 다른 종류의 DB에서는 
-     잘 안 돌아갈 수 있음
+    
+    - 사용하는 클래스들이 SQL Server와의 소통에만 사용 가능, 다른 데이터베이스 서버와는 사용하기 힘듬
+     
+     -> DbConnection 을 사용해서 해결함
+     -> 절반만 해결된 상황... 
+    
+     -> SQL은 배포판이나 판매하는 회사에 따라 언어에 추가된 사항이 다르고 데이텨형에도 차이가 있음 
+      => 어떤 DB를 위해 작성된 코드가 다른 종류의 DB에서는 
+      잘 안 돌아갈 수 있음
 - LINQ의 도입의 두 가지 측면:
     - MS사가 데이터 매핑 솔루션을 제공하지 못했던 상황에서 LINQ가 질의를 프로그래밍 언어에 내장시킬 수 있는 좋은 방법으로 인식됨
     - 예제코드 1.2의 한계점을 상당 부분 극복해냄
     - **중요한 점:**
+        
         - LINQ 사용 시, 다음의 문법으로 어떤 종류의 데이터 저장소에 대한 질의도 본인이 늘 사용하여 익숙하게 다룰 수 있는 프로그래밍 언어 내에서 수행 가능함.
         ```C#
         from customer in customers
@@ -191,9 +199,98 @@ using (SqlConnection connection = new SqlConnection("..."))
     - 최적화된 활용을 위해서 여전히 관계형 DB에 대한 해박한 이해가 필요함
     - 매핑 도구는 항상 효율적이지만은 않음
     - 모든 도구가 컴파일시 체크를 지원해주는 것은 아님
-    
+#### Object-XML 매핑
+- 객체와 XML 간에도 상호불일치가 존재함
+- XML 스키마 정의에 포함되어 있는 형(type) 시스템은 .NET 프레임워크의 형 시스템과 일대일 대응의 관계에 있지 않음
+- But... System.Xml에 이를 다루는 API들이 있고 객체의 직렬화를 지원하는 기능이 포함되어 있음<br>
+-> .NET 애플리케이션에서 XML을 사용하는 것은 큰 문제가 아님
+
+- But... 여전히 매우 간단한 작업 시에도 아주 지루한 코드를 작성할 경우가 있음
+- 각 영역 간의 갭의 예시
+    - 관계형 DB는 관계대수로 표현되어 있음, 테이블, 행, 열, SQL을 다룸
+    - XML은 문서, 개체, 속성, 계층구조, XPath 에 관한 것들임
+    - 객체지향 범용언어들과 .NET은 클래스, 메소드, 프로퍼티, 상속, 반복문 등의 세계에서 놀고 있음
+ - 많은 개념들이 다른 영역으로의 직관적인 매핑을 제공하지 않음
+ - C# 과 VB.NET 같은 .NET 기반의 언어는 개발자들이 IntelliSense, 엄격한 형의 코드, 컴파일시의 체크 등 여러 가지 유용한 기능을 사용가능하게 함
+ - 이런 기능들은 컴파일러에 의해 체크되지 않는 SQL문이나 XML 조각들을 실수로 코드내에 끼워넣을 때 쉽게 오동작 일으킬 수 있음
+
+- 이런 문제의 완벽한 해결을 위해 서로 다른 기술 간의 갭을 해소하고 메모리내 객체와 저장매체 간의 상호불일치를 해결할 필요가 있음
+- 이러한 문제를 해결하기 위해 .NET과 다른 데이터 저장소 개체 간의 문제를 해결해야 함
+
+    - 근본적인 기술 간의 차이
+    - 여러 종류의 데이터 저장소가 가능한 일과 가능하지 않은 일의 차이
+    - 각각의 기술에 대한 소유권과 기술적 권고사항의 차이
+    - 다른 모델링과 설계원칙
+
 ### 1.2.3 해결사로서의 LINQ
-  
+- 메모리내 객체와 관계형 DB의 데이터를 함께 잘 혼용하기 위해 두 가지 데이터 저장소의 특성과 차이 및 패러다임을 이해하고 나서 그 지식을 바탕으로 적절한 선택을 해야 함
+- LINQ와 LINQ to SQL을 이용하면 그 한계와 선택에 대한 걱정을 줄일 수 있음
+- 상호불일치는 둘 중 어느 한 쪽을 "primary"한 것으로 선택해야 하는 과정을 요구함
+- MS사는 LINQ를 사용하여 프로그래밍 언어쪽을 선택함
+    - 그들 입장에서는 C#이나 VB.NET 언어의 개념을 변화시키는 것이 더 쉬웠기 때문!
+- LINQ의 주된 목표: 데이터 질의와 조작능력을 프로그래밍 언어에 부여하는 것
+
+- LINQ는 객체와 DB, XML 간에 존재하는 많은 장벽을 허뭄
+- 각각의 패러다임을 동일한 언어 내장형 기능을 이용하여 작업 가능함<br>
 
 
-## LINQ to Objects LINQ to XML, LINQ to SQL과의 첫 만남
+[하나의 질의 속에서 관계형 데이터와 XML을 동시에 다루기]
+```C#
+var database = new RssDB("server=.; initial catalog=RssDB");
+
+XElement rss = new XElement("rss",
+  new XAttribute("version", "2.0"),
+  new XElement("channel",
+    new XElement("title", "LINQ in Action RSS Feed"),
+    new XElement("link", "http://LinqInAcation.net"),
+    new XElement("description","The RSS feed for this book"),
+    from post in database.Posts
+    orderby post.CreationDate descending
+    select new XElement("item",
+      new XElement("title", post.Title),
+      new XElement("link", "posts.aspx?id="+post.ID),
+      new XElement("description", post.Description),
+      from category in post.Categories
+      select new XElement("category", category.Description)
+    )
+  )
+);
+```
+## 1.3 LINQ의 기원과 설계상의 목표
+- MS사가 LINQ를 통해서 얻고자 했던 것은 무엇이었나?
+- LINQ 프로젝트의 설계상 목표가 무엇인지 알아보는 것부터 시작!
+- LINQ가 MS사의 다른 프로젝트들과 어떤 관계를 갖고 있는지를 살펴본 후, 
+LINQ가 C#이나 ObjectSpaces, WinFS, XQuery 지원 등과 어떤 상호 관계를 가지는 지 살펴보자
+
+### 1.3.1 LINQ 프로젝트의 목표
+- LINQ의 기능 중 최고는 다음과 같은 여러 가지 종류의 데이터형과 저장소에 대응할 수 있는 능력
+
+[LINQ의 설계상 목표와 동기]
+
+| 목표                                                        | 동기                                                         |
+| ----------------------------------------------------------- | ------------------------------------------------------------ |
+| 객체나 관계형 데이터, XML의 통합                            | 데이터 저장소와 프로그래밍 언어에 구애받지 않고 통합된 질의 문법을 제공함, 저장소나 메모리 내의 표현형태와 무관한 단일 데이터 처리 모델을 확립함 |
+| C#과 VB.NET 에서 사용 가능한 SQL이나 XQuery와 유사한 강력함 | 프로그래밍 언어에 바로 질의기능을 내장함                     |
+|                                                             |                                                              |
+|                                                             |                                                              |
+|                                                             |                                                              |
+|                                                             |                                                              |
+|                                                             |                                                              |
+|                                                             |                                                              |
+|                                                             |                                                              |
+
+
+
+
+### 1.3.2 역사에 관한 설명
+## 1.4  LINQ to Objects의 첫걸음: 메모리 내의 컬렉션 객체에 대한 질의
+### 1.4.1 코드를 작성하기에 앞서 알아두어야 할 사항
+### 1.4.2 Hello LINQ to Objects
+## 1.5 LINQ to XML의 첫걸음: XML 문서 질의하기
+### 1.5.1 LINQ to XML은 왜 필요한가?
+### 1.5.2 Hello LINQ to XML
+## 1.6 LINQ to SQL의 첫걸음: 관계형 DB에 대해 질의하기
+### 1.6.1 LINQ to SQL의 기능들
+### 1.6.2 Hello LINQ to SQL
+### 1.6.3 더 가까이서 살펴본 LINQ to SQL
+## 1.7 요약
