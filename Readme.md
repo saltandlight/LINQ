@@ -2,7 +2,7 @@
 **거침 없이 배우는 LINQ**를 참고하고 있습니다.
 - Chapter01. LINQ의 소개
 
-- Chapter02
+- Chapter02. 개선된 C#과 VB.NET의 언어상 기능
 
 - Chapter04
 
