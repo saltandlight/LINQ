@@ -142,3 +142,133 @@ ObjectDumper.Write(
         .Take(2)
         .Sum(process => process.Memory)/1024/1024);
 ```
+### 2.5.3 예제에서 실제로 사용되는 확장 메소드
+- 지금까지의 수정사항을 모두 반영한 다음의 코드(DisplayProcess)
+[확장 메소드를 이용하여 구현한 DisplayProcesses 메소드]
+```C#
+static void DisplayProcesses(Func<Process, Boolean> match)
+{
+    var processes = new List<ProcessData>();
+    foreach(var process in PRocess.GetProcesses())
+    {
+        if(match(process))
+        {
+            processes.Add(new ProcessData
+            {
+                Id = process.Id,
+                Name = process.ProcessName, 
+                Memory = process.WorkingSet64
+            });
+        }
+    }
+
+    Console.WriteLine("Total memory: {0} MB",
+        processes.TotalMemory()/1024/1024);
+    
+    var top2Memory =
+        processes
+            .OrderByDescending(process => process.Memory)
+            .Take(2)
+            .Sum(process => process.Memory)/1014/1024;
+    Console.WriteLine(
+        "Memory consumed by the two most hungry processes: {0} MB", top2Memory);
+
+    ObjectDumper.Write(processes);
+}
+```
+[정적 메소드를 이용한 방법]
+```C#
+var top2Memory =
+    Enumerable.Sum(
+        Enumerable.Take(
+            Enumerable.OrderByDescending(processes, process => process.Memory),
+            2),
+            process => process.Memory)/1024/1024;
+```
+[확장 메소드를 이용한 방법]
+```C#
+var top2Memory =
+  processes.
+    .OrderByDescending(process => process.Memory)
+    .Take(2)
+    .Sum(process => process.Memory)/1024/1024;
+```
+- 점으로 연결된 표현방식을 통해 줄줄히 연결된 형태의 호출을 사용하기에 편리하게 되어 있음
+- Unix의 파이프 기능과 견줄 수 있는 형태의 구조임
+
+- 두 번째 형태를 따라 확장 메소드 이용 시 가독성 높아지고 이해하기 쉬워짐
+- 연산과정은 정확히 묘사되어 있음
+- 프로세스들을 메모리 사용량으로 정렬, 최초의 두 개를 선택, 메모리 사용량을 합산하려고 함
+- 첫 번째 코드에서는 이런 의도가 명확히 표현되지 않음 <- 첫 번째 경우에는 괄호에 둘러싸인 복잡한 구조의 메소드 호출이 주를 이루고 있어서!
+
+### 2.5.4 주의사항
+- 만약 확장 메소드가 다른 인스턴스 메소드와 충돌한다면...?
+- 확장 메소드가 어떤 순서대로 호출되고 어떤 우선순위를 갖는지 확인하는 것은 매우 중요함
+    - 확장 메소드는 인스턴스 메소드들에 비해 찾기가 매우 어려움
+- 확장 메소드들이 항상 좀 더 낮은 우선순위를 갖고 있음
+- 확장 메소드는 인스턴스 메소드보다 먼저 호출되지 않음
+
+[확장 메소드의 검색 용이성을 보여주는 예제 코드]
+```C#
+using System;
+
+class Class1
+{
+}
+
+class Class2
+{
+    public void Method1(string s)
+    {
+        Console.WriteLine("Class2.Method1");
+    }
+}
+
+class Class3
+{
+    public void Method1(object o)
+    {
+        Console.WriteLine("Class3.Method1");
+    }
+}
+
+class Class4
+{
+    public void Method1(int I)
+    {
+        Console.WriteLine("Class4.Method1");
+    }
+}
+
+static class Extensions
+{
+    static public void Method1(this object o, int I)
+    {
+        Console.WriteLine("Extensions.Method1");
+    }
+}
+
+static void Main()
+{
+    new Class1().Method1(12);
+    new Class2().Method1(12);
+    new Class3().Method1(12);
+    new Class4().Method1(12);
+}
+```
+[수행 결과]
+```C#
+Extensions.Method1
+Extensions.Method1
+Class3.Method1
+Class4.Method1
+```
+- 정확히 맞는 매개변수형을 가진 인스턴스 메소드를 발견 시 그 메소드가 수행됨
+- 정확히 들어맞는 매개변수형을 가진 인스턴스 메소드가 발견되지 않을 경우에만 확장 메소드가 수행됨
+
+- 확장 메소드들은 인스턴스 메소드들에 비해 기능적 제약이 더 큼
+- 확장 메소드들은 멤버가 public이 아니면 접근 불가능함
+- 언제 확장 메소드를 사용하는지 모르게 빈번히 사용 -> 코드의 가독성 저해 가능성 있음
+- 확장 메소드를 사용하는 것이 유리한 상황일 떄만 쓰는 것이 좋다.
+
+- 확장 메소드 기능을 사용하면 예제코드를 아주 효율적으로 작성 가능함
