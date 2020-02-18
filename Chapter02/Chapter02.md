@@ -104,6 +104,41 @@ ObjectDumper.Write(
     processes.OrderByDescending(process => process.Memory));
 ```
 - 매개변수로 던져준 내용을 살펴보면 프로세스들을 메모리 사용량을 바탕으로 정렬하고자 한다는 의도를 알 수 있음
+- **코드를 간소화하기 위해 자동으로 알아서 형을 유추함**
+- 비록 OrderByDescending이 제네릭 메소드로 구현되었음 그러나 다루려는 형을 명시적으로 선언해줄 필요가 없음
+- C# 컴파일러가 알아서 OrderByDescending이 Process 객체에 동작하여 Int64 객체를 반환하는 메소드라는 것을 추론해냄
+- 형을 선언하지 않고, 컴파일러가 알아서 추론하게 하는 것은 제너릭 메소드를 호출하는 구문을 좀 더 유연하고 효율적이게 해줌
+    - 프로그래머는 매번 형에 관한 정보를 명시해주는 수고를 하지 않아도 됨
+```C#
+public static IOrderedSequence<TSource>
+  OrderByDescending<TSource, TKey>(
+      this IEnumerable<TSource> source,
+      Func<TSource, TKey> keySelector)
+```
+-  형 추론기능을 사용할 수 없다면...?
+```C#
+processes.OrderByDescendig<Process, Int64>(
+    (Process process) => process.Memory));
+```
+- 만약 형 추론을 사용 불가능하고 LINQ 질의의 여기저기에 형을 명시해야 한다면 코드의 가독성은 떨어질 것
 
 **Take**
+- 만약 가장 메모리를 많이 차지하는 두 개의 프로세스를 찾아내는 것에만 관심 있다면 Take 확장 메소드 이용 가능함
+```C#
+ObjectDumper.Write(
+    processes
+        .OrderByDescending(process => process.Memory)
+        .Take(2));
+```
+- Take 메소드는 어떤 객체의 집합에서 처음 n개의 객체를 선발하여 반환함
+
 **Sum**
+- 만약 두 개의 프로세스에서 사용되는 메모리량의 합을 구하고 싶다면 다른 표준확장 메소드인 Sum을 활용 가능
+- 예제에서 사용한 확장 메소드인 TotalMemory 대신 사용 가능함
+```C#
+ ObjectDumper.Wirte(
+    processes
+        .OrderByDescending(process => process.Memory)
+        .Take(2)
+        .Sum(process => process.Memory)/1024/1024);
+```
