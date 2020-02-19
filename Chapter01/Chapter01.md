@@ -303,13 +303,109 @@ LINQ가 C#이나 ObjectSpaces, WinFS, XQuery 지원 등과 어떤 상호 관계�
 
 - Cw는 프리뷰의 형태로 공개되었음
 - Cw가 .NET과 C#의 형 시스템을 확장하려 한 시도는 SQL 형태의 질의와 질의 결과 집합, XML 내용을 언어의 일원으로 아우르려는 첫 번재 시도였음
+- Cw는 .NET 2.0 의 System.Collections.Generic.IEnumerable<T>와 비견되는 스트림형(stream type)을 도입함
+- Cw가 지원한 다른 한 부분은 VB.NET에서 볼 수 있는 내장된 형태의 XML임
 
 #### ObjectSpaces
+- 사실 LINQ to SQL은 MS사가 객체-관계 매핑 연구로서 최초로 시도한 것은 아님
+- ObjectSpaces라는 프로젝트가 있었음
+- ObjectSpaces는 데이터 접근 API들의 집합, 데이터 저장소의 종류 및 위치와 무관하게 데이터를 객체로 다루는 기능이 있었음
+    - OPath라는 객체 질의 언어를 지원하고 있었음
+
 #### XQuery 구현
+- ObjectSpaces와 같은 시기, MS사는 XQuery 처리기에 대한 작업에 착수
+- XQuery의 한 가지 문제점: 사용자가 XML 만을 다루기 위해 또 다른 언어를 배워야 함
+
+- 왜 MS사는 이런 시도들을 중단했는가?
+    - LINQ로 질의가 불가능한 것이 거의 없기 떄문에 ObjectSpaces나 XQuery를 클라이언트에 지원할 이유가 사라짐
 
 ## 1.4  LINQ to Objects의 첫걸음: 메모리 내의 컬렉션 객체에 대한 질의
 ### 1.4.1 코드를 작성하기에 앞서 알아두어야 할 사항
+**컴파일러 및 .NET 프레임워크 지원과 필요한 소프트웨어**
+- 이 버전 중 하나의 Visual Studio를 설치해야 함
+    - Visual C# 2008 Express Edition
+    - Visual Basic 2008 Express Edition
+    - Visual Web Developer 2008 Express Edition
+    - Visual Studio 2008 Standard Edition 또는 그 이상
+- LINQ to SQL 예제들을 돌려보려면 다음 중 하나를 사용 가능해야 함
+    - SQL Server 2005 Express Edition 또는 SQL Server 2005 Compact Edition
+    - SQL Server 2005
+    - SQL Server 2000a
+    - 이보다 높은 버전의 SQL Server
+
+**언어에 대한 이해**
+- C# 프로그래밍 언어의 문법을 알고 있다면 충분하오
+
 ### 1.4.2 Hello LINQ to Objects
+[예제: C#으로 작성한 Hello World]
+```C#
+using System;
+using System.Linq;
+
+static class HelloWorld
+{
+    static void Main()
+    {
+        string[] words = 
+        {"hello", "wonderful", "linq", "beautiful", "world" };
+
+        var shortWords =
+          from word in words
+          where word.Length <= 5
+          select word;
+        
+        foreach(var word in shortWords)
+          Console.WriteLine(Word);
+    }
+}
+```
+
+[예제: VB.NET으로 작성한 Hello LINQ]
+```VB.NET
+Module HelloWorld
+  Sub Main()
+    Dim words As String() =
+      {"hello", "wonderful", "linq", "beautiful", "world"};
+
+    Dim shortWords = _
+      From word In words _
+      Where word.Length <= 5 _
+      Select word
+
+    For Each word In shortWords
+      Console.WriteLine(word)
+    Next
+  EndSub
+End Module
+```
+[실행 결과]
+hello
+linq
+world
+
+[예제: 고전적인 방식으로 구현한 Hello LINQ]
+```C#
+using System;
+
+static class HelloWorld
+{
+    static void Main()
+    {
+        string[] words = new string[]
+        {"hello", "wonderful", "linq", "beautiful", "world"};
+
+        foreach(string word in words)
+        {
+            if(word.Length <= 5)
+              Console.WriteLine(word);
+        }
+    }
+}
+```
+- 이 코드가 더 간결하고 이해하기 쉽다....
+- 그러나 LINQ가 제공하는 장점들은 무궁무진함...!
+- 만약 그룹화 기능과 정렬 기능을 추가한다면...?
+
 ## 1.5 LINQ to XML의 첫걸음: XML 문서 질의하기
 ### 1.5.1 LINQ to XML은 왜 필요한가?
 ### 1.5.2 Hello LINQ to XML
