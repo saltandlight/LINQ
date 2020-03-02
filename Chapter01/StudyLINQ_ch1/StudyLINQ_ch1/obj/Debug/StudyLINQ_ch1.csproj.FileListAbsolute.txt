@@ -1,0 +1,7 @@
+C:\Users\95hae\OneDrive\바탕 화면\StudyLINQ_ch1\StudyLINQ_ch1\bin\Debug\StudyLINQ_ch1.exe
+C:\Users\95hae\OneDrive\바탕 화면\StudyLINQ_ch1\StudyLINQ_ch1\bin\Debug\StudyLINQ_ch1.pdb
+C:\Users\95hae\OneDrive\바탕 화면\StudyLINQ_ch1\StudyLINQ_ch1\obj\Debug\StudyLINQ_ch1.csprojResolveAssemblyReference.cache
+C:\Users\95hae\OneDrive\바탕 화면\StudyLINQ_ch1\StudyLINQ_ch1\obj\Debug\StudyLINQ_ch1.exe
+C:\Users\95hae\OneDrive\바탕 화면\StudyLINQ_ch1\StudyLINQ_ch1\obj\Debug\StudyLINQ_ch1.pdb
+D:\LINQ\Chapter01\StudyLINQ_ch1\StudyLINQ_ch1\obj\Debug\StudyLINQ_ch1.exe
+D:\LINQ\Chapter01\StudyLINQ_ch1\StudyLINQ_ch1\obj\Debug\StudyLINQ_ch1.pdb
