@@ -405,7 +405,56 @@ static class HelloWorld
 - 이 코드가 더 간결하고 이해하기 쉽다....
 - 그러나 LINQ가 제공하는 장점들은 무궁무진함...!
 - 만약 그룹화 기능과 정렬 기능을 추가한다면...?
+```C#
+ class Program
+    {
+        static void Main(string[] args)
+        {
+            string[] words =
+                {"hello", "wonderful", "linq", "beautiful", "world" };
 
+            var groups =
+                from word in words
+                orderby word ascending
+                group word by word.Length into lengthGroups
+                orderby lengthGroups.Key descending
+                select new { Length = lengthGroups.Key, Words = lengthGroups };
+
+            foreach (var group in groups)
+            {
+                Console.WriteLine("Words of length " + group.Length);
+                foreach (string word in group.Words)
+                {
+                    Console.WriteLine(" " + word);
+                }
+            }
+
+            Console.ReadKey();
+        }
+    }
+```
+```VB.NET
+Module HelloWorld
+      Sub Main ()
+            string[] words =
+                {"hello", "wonderful", "linq", "beautiful", "world" };
+
+            Dim groups = _
+                From word In words_
+                Order By word Ascending _
+                Group By word.Length Into TheWords = Group _
+                Order By Length Descending
+            
+            For Each group in groups
+                Console.WriteLine("Words of length " + _
+                    group.Length.ToString())
+                For Each word in group.TheWords
+                    Console.WriteLine(" "+Word)
+                Next
+             Next
+        End Sub
+End Module
+```
 - "단어 목록 중 알파벳순으로 단어를 정렬한 후 그 길이에 따라 내림차순으로 그룹화하라"
 는 질의를 하나의 질의로 표현함
 - 이것을 LINQ로 하지 않는다면 훨씬 많은 코드와 컬렉션을 다루어야 함
