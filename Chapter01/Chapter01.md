@@ -499,10 +499,19 @@ End Module
 | 빠르고 가벼움                                                | 매우 무겁고 메모리 사용량 많음                |
 | 스트리밍을 지원함                                            | 모든 것이 메모리에 로딩됨                     |
 | 개체와 속성의 API가 유사함                                   | XML 문서의 구성요소들마다 다루는 방법이 다름  |
+- LINQ to XML은 DOM의 문서 중심의 접근법 대신 **개체 중심의 접근법**을 실현 가능하게 함
 
+- .NET 프레임워크가 제공하는 두 개의 클래스는 XmlReader와 XmlWriter
+- 이 클래스들은 XML 텍스트를 그대로 처리 가능하게 함, LINQ to XML에 비해 저급한 방식으로 XML을 취급함
+- LINQ to XML은 기술적으로 완전히 새로운 XML API를 이용하지는 않음
+    - 내부적으로 XmlReader와 XmlWriter 클래스를 이용하고 있음
+    - -> LINQ to XML은 XmlReader 및 XmlWriter와의 호환성을 유지하고 있음
 
+- LINQ to XML은 좀 더 직접적인 방법으로 문서를 생성 가능하게 함, XML 문서의 내용을 질의하는 것도 더 쉽게 해줌
+- LINQ 기술을 그대로 확장하고 있으므로 다른 데이터 저장소에서 가져온 데이터와 함께 사용해야 할 때 아주 좋은 선택이 될 것
 
 ### 1.5.2 Hello LINQ to XML
+[Book 클래스가 C#에서 정의되는 예]
 ## 1.6 LINQ to SQL의 첫걸음: 관계형 DB에 대해 질의하기
 ### 1.6.1 LINQ to SQL의 기능들
 ### 1.6.2 Hello LINQ to SQL
