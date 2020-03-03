@@ -631,13 +631,52 @@ static class HelloLinqToXml
             }
 
             doc.AppendChild(root);
-
             doc.Save(Console.Out);
     }
 }
 ```
+- LINQ to XML이 DOM에 비해 훨씬 시각적으로 친숙함
+- XML 조각을 얻어내기 위해 작성하는 코드의 구조 = 궁극적으로 만들고자 하는 문서의 모습과 매우 유사함
+- 이러한 형태의 접근법 = **함수형 생성 패턴**
+
 ## 1.6 LINQ to SQL의 첫걸음: 관계형 DB에 대해 질의하기
+- LINQ to SQL은 자동으로 객체에 대한 변화를 추적함
+- 동적인 SQL 질의나 저장된 프로시저를 통해 데이터베이스를 적절히 관리함
+- LINQ는 질의라는 개념 자체를 프로그래밍 언어에 포함시킴 -> 매우 자연스러운 일부분으로 만드는 것을 목표로 함
+- 이 정신을 이어받아 개발자들이 LINQ to Object나 LINQ to XML에서 접했던 구문과 동일한 구문을 사용
+    - -> 관계형 데이터베이스를 질의할 수 있게 해줌
+
 ### 1.6.1 LINQ to SQL의 기능들
+- LINQ to SQL는 LINQ의 확장 매커니즘을 통해 언어 내장형의 데이터 접근기능을 제공함
+- .NET 사용자 정의 프로퍼티에 암호화되어 저장된 매핑 정보나 XML 문서를 이용함
+- 이 정보는 자동적으로 관계형 DB에 저장된 객체들의 영속성을 다루기 위해 사용됨
+
 ### 1.6.2 Hello LINQ to SQL
+- 객체의 컬렉션에 대해 질의 작성 가능함
+- 다음 코드는 메모리 내의 연락처 정보의 집합을 도시에 따라서 필터링함
+```C#
+from contact in contacts
+where contact.City == "Paris"
+select contact;
+```
+- LINQ to SQL 덕분에 데이터베이스에서 LINQ 질의가 가능한 메모리내 객체로 데이터를 옮기는 과정 생략 가능
+- 곧바로 관계형 데이터베이스에 매우 유사한 LINQ 질의를 직접 보내는 게 가능
+
+```C#
+from contact in db.GetTable<Contact>()
+where contact.City == "Paris"
+select contact;
+```
+
+- 질의가 동작하는 대상 객체만 다를 뿐, 질의문법 구조 자체는 완벽하게 똑같다!
+- -> 어떻게 여러 종류의 데이터에 동일한 방법으로 접근할 수 있는지 보여주는 좋은 예시임
+- SQL 질의를 자동생성하게 되는 LINQ 질의임
+- LINQ to SQL의 경우: 실제로 데이터를 처리하는 동작은 데이터베이스 서버에서 이루어짐
+    - 프로그래밍 언어 속에 잘 들어맞음, SQL 질의와 다르게 컴파일시에 검증까지 이루어지는 매우 정형화된 엄격한 형을 가진 질의 API
+
+#### 개체 클래스
+
+#### DataContext   
+
 ### 1.6.3 더 가까이서 살펴본 LINQ to SQL
 ## 1.7 요약
