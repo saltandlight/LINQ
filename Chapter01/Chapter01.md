@@ -512,6 +512,130 @@ End Module
 
 ### 1.5.2 Hello LINQ to XML
 [Book 클래스가 C#에서 정의되는 예]
+```C#
+ class Book"
+    {
+        public string Publisher;
+        public string Title;
+        public int Year;
+
+        public Book(string title, string publisher, int year)
+        {
+            Title = title;
+            Publisher = publisher;
+            Year = year;
+        }
+    }
+```
+
+[VB.NET에서의 코드]
+```VB.NET
+Public Class Book
+ Public Publisher As String
+ Public Title As String
+ Public Year As Integer
+
+ Public Sub New( _
+    ByVal title As String, _
+    ByVal publisher As String, _
+    ByVal Year As Integer)
+  Me.Title = title
+  Me.Publisher = publisher
+  Me.Year = year
+ End Sub
+End Class
+```
+- 다음과 같은 책의 컬렉션을 가지고 있다고 하자
+```C#
+Book[] books = new Book[] {
+  new Book("Ajax in Action", "Manning", 2005),
+  new Book("Windows Forms in Action", "Manning", 2006),
+  new Book("RSS and Atom in Action", "Manning", 2006)
+};
+```
+- 2006년에 출간된 책을 XML 형식으로 받고 싶다면...
+[LINQ to XML을 사용한 방법]
+```C#
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Xml.Linq;
+
+namespace StudyLINQ_ch1
+{
+    class Book
+    {
+        public string Publisher;
+        public string Title;
+        public int Year;
+
+        public Book(string title, string publisher, int year)
+        {
+            Title = title;
+            Publisher = publisher;
+            Year = year;
+        }
+    }
+
+    static class HelloLinqToXml
+    {
+        static void Main()
+        {
+            Book[] books = new Book[] {
+              new Book("Ajax in Action", "Manning", 2005),
+              new Book("Windows Forms in Action", "Manning", 2006),
+              new Book("RSS and Atom in Action", "Manning", 2006)
+            };
+            XElement xml = new XElement("books",
+                from book in books
+                where book.Year == 2006
+                select new XElement("book",
+                  new XAttribute("title", book.Title),
+                  new XElement("publisher", book.Publisher)
+                )
+            );
+
+            Console.WriteLine(xml);
+        }
+    }
+}
+```
+[XML DOM을 이용한 방법]
+```C#
+static class HelloLinqToXml
+{
+    static void Main()
+     {
+            Book[] books = new Book[] {
+              new Book("Ajax in Action", "Manning", 2005),
+              new Book("Windows Forms in Action", "Manning", 2006),
+              new Book("RSS and Atom in Action", "Manning", 2006)
+            };
+
+            XmlDocument doc = new XmlDocument();
+            XmlElement root = doc.CreateElement("books");
+            foreach (Book book in books)
+            {
+                if (book.Year == 2006)
+                {
+                    XmlElement element = doc.CreateElement("book");
+                    element.SetAttribute("title", book.Title);
+
+                    XmlElement publisher = doc.CreateElement("publisher");
+                    publisher.InnerText = book.Publisher;
+                    element.AppendChild(publisher);
+
+                    root.AppendChild(element);
+                }
+            }
+
+            doc.AppendChild(root);
+
+            doc.Save(Console.Out);
+    }
+}
+```
 ## 1.6 LINQ to SQL의 첫걸음: 관계형 DB에 대해 질의하기
 ### 1.6.1 LINQ to SQL의 기능들
 ### 1.6.2 Hello LINQ to SQL
