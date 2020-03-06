@@ -675,8 +675,82 @@ select contact;
     - 프로그래밍 언어 속에 잘 들어맞음, SQL 질의와 다르게 컴파일시에 검증까지 이루어지는 매우 정형화된 엄격한 형을 가진 질의 API
 
 #### 개체 클래스
+- LINQ to SQL 애플리케이션을 작성하는 첫 번째 단계: 애플리케이션 데이터를 표현하게 될 개체 클래스를 선언하는 것
+
+- 마이크로소프트사가 LINQ 코드 예제와 함께 제공하는 Northwind 샘플 데이터베이스의 Contacts테이블에 연결할 것
+- 이 과정을 위해 해야 할 일: 사용자 정의 프로퍼티 하나만 클래스에 적용
+```C#
+[Table(Name="Contacts")]
+class Contact
+{
+    public int ContactID;
+    public string Name;
+    public string City;
+}
+```
+- Table 프로퍼티는 System.Data.Linq.Mapping 네임스페이스를 통해 LINQ to SQL을 제공
+- 데이터베이스 테이블의 이름을 지정할 수 있도록 Name 프로퍼티를 가지고 있음
+
+- 개체 클래스를 테이블과 연관짓는 것 + 테이블의 열과 관련된 각각의 항목이나 프로퍼티가 무엇인지 별도로 표시해둬야 함
+- Column 프로퍼티를 통해 이런 일을 할 수 있음
+
+```C#
+[Table(Name="Contacts")]
+class Contact
+{
+    [Column(IsPrimaryKey=true)]
+    public int ContactID;
+    [Column(Name="ContactName")]
+    public string Name;
+    [Column]
+    public string City;
+}
+```
+- ContactName이라고 표시한 곳을 보면 다른 열의 이름이나 열의 형을 지정해주지 않음
+- 이 경우 LINQ to SQL이 알아서 클래스의 항목 중에서 추측해냄~!
 
 #### DataContext   
+- 프로그래밍 언어에 내장된 질의(LINQ)를 이용하기 위해 준비해야 하는 것은 System.Data.Linq.DataContext 객체
+- DataContext의 목적: 객체에 대한 요청을 데이터베이스가 알아듣는 SQL 질의로 변환, 반대로 결과로 나오는 값들을 다시 객체로 만들어 표출하는 것
+
+- 이것을 위해 NorthWind.mdf 데이터베이스를 사용할 것
+- 이 데이터베이스는 Data 디렉토리 안에 들어있으며 DataContext 객체의 생성과정은 다음과 같음
+```C#
+string path = Path.GetFullPath(@"..\..\..\..\Data\northwind.mdf");
+DataContext db = new DataContext(path);
+```
+- DataContext 클래스의 생성자는 connection string을 매개변수로 받아들임
+
+- DataContext는 데이터베이스 내의 테이블에 접근 가능하게 함
+[Contact 클래스에 매핑된 Contacts 테이블에 접근하는 방법]
+`Table<Contact> contacts = db.GetTable<Contact>()`
+- DataContext.GetTable은 엄격한 형을 가지고 작업할 수 있게 해주는 제너릭 메소드
+- 이것이 LINQ 질의를 사용 가능하게 해줌!
+
+- 나도 모르게 SQL Server에 보내진 SQL문
+```SQL
+SELECT [t0].[ContactID], [t0].[ContactName] AS [Name], [t0].[City]
+FROM [Contacts] AS [t0]
+WHERE [t0].City = @p0
+```
+- LINQ를 사용해보면 얼마나 쉽게 엄격한 형을 유지하여 데이터베이스에 접근할 수 있는지 알 수 있음
+
+- LINQ to SQL이 자동으로 개발자 대신 해주는 일
+    - 데이터베이스에 대한 연결을 여는 일
+    - 데이터베이스가 알아들을 수 있는 SQL 질의를 작성하는 일
+    - 데이터베이스에 대해 그 질의를 수행시키는 일
+    - 테이블 형태로 반환된 결과를 사용하기 쉬운 객체형태로 전환시켜 주는 일
+
+- 고리타분한 방식의 코드와 LINQ to SQL 비교 시 확인 가능한 것들
+    - SQL로 작성된 따옴표 속에 들어 있는 질의
+    - 컴파일시 오류항목을 체크하지 못함
+    - 느슨하게 바인딩된 매개변수
+    - 느슨하게 형이 적용된 반환 결과물
+    - 더 많은 코드
+    - 더 많은 사전 지식
+
+- LINQ to SQL은 데이터 접근 코드의 압박에서 벗어나 효율적으로 코드를 작성할 수 있게 해줌
 
 ### 1.6.3 더 가까이서 살펴본 LINQ to SQL
 ## 1.7 요약
+
