@@ -727,6 +727,48 @@ DataContext db = new DataContext(path);
 - DataContext.GetTable은 엄격한 형을 가지고 작업할 수 있게 해주는 제너릭 메소드
 - 이것이 LINQ 질의를 사용 가능하게 해줌!
 
+```C#
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Data.Linq;
+using System.Data.Linq.Mapping;
+
+namespace StudyLINQ_ch1
+{
+    class HelloLinqToSql
+    {
+        [Table(Name = "Contacts")]
+        class Contact
+        {
+            [Column(IsPrimaryKey=true)]
+            public int ContactID { get; set; }
+            [Column(Name="ContactName")]
+            public string Name { get; set; }
+            [Column]
+            public string City { get; set; }
+
+        }
+
+        static void Main()
+        {
+            string path =
+                System.IO.Path.GetFullPath(@"..\..\..\..\Data\northwnd.mdf");
+            DataContext db = new DataContext(path);
+            var contacts =
+                from contact in db.GetTable<Contact>()
+                where contact.City == "Paris"
+                select contact;
+
+            foreach (var contact in contacts)
+            {
+                Console.WriteLine("Bonjour " + contact.Name);
+            }
+         }
+    }
+}
+```
 - 나도 모르게 SQL Server에 보내진 SQL문
 ```SQL
 SELECT [t0].[ContactID], [t0].[ContactName] AS [Name], [t0].[City]
@@ -752,5 +794,10 @@ WHERE [t0].City = @p0
 - LINQ to SQL은 데이터 접근 코드의 압박에서 벗어나 효율적으로 코드를 작성할 수 있게 해줌
 
 ### 1.6.3 더 가까이서 살펴본 LINQ to SQL
-## 1.7 요약
+- LINQ to SQL은 원한다면 SQL 질의를 직접 손으로 작성하거나 저장된 프로시저를 이용하면서 LINQ to SQL의 나머지 장점을 그대로 흡수할 수 있는 방법도 제공함
+- 개체 클래스를 생성하고 매핑 정보를 제공하는 부분: LINQ to SQL과 함께 제공되는 LINQ to SQL Designer에 의해 자동으로 생성 가능함
 
+## 1.7 요약
+- LINQ는 단순히 SQL이나 XML을 C#이나 VB.NET에서 코드 속에 내장시키는 것을 의미하지는 않음 
+- 훨씬 광범위한 개념의 전환이 숨어 있음
+- LINQ는 애플리케이션에서 데이터에 접근하는 완전히 새로운 방법을 제시해줌
