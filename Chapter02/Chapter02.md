@@ -30,6 +30,25 @@
 - System.Diagnostic.Process.GetProcesses API를 사용하면 쉽게 구할 수 있음
 [프로세스의 목록을 열거하는 간단한 .NET 2.0기반의 코드]
 ```C#
+class LanguageFeatures
+{
+        static void DisplayPrcoesses()
+        {
+            List<String> processes = new List<String>();
+            foreach (Process process in Process.GetProcesses())
+            {
+                processes.Add(process.ProcessName);
+                Console.WriteLine(process.ProcessName);
+            }
+
+            
+        }
+        static void Main(string[] args)
+        {
+            DisplayPrcoesses();
+            Console.ReadKey();
+        }
+}
 ```
 - 여기서는 제너릭 리스트 List<T>를 기반으로 한 목록을 이용함
 - 제너릭은 .NET 2.0 에 추가된 중요한 내용임
@@ -39,6 +58,40 @@
 - 리스트에 프로세스의 ID, 이름, 메모리 사용량 등을 포함시키려고 함
 - 이 작업을 수행하기 위해서는 새로운 클래스나 구조를 만들어 프로세스에 대해서 알고 싶은 정보들을 그룹화하여 다룰 수 있어야 함
 ```C#
+ class LanguageFeatures2
+{
+        class ProcessData
+        {
+            public Int32 Id;
+            public Int64 Memory;
+            public String Name;
+
+            public override string ToString()
+            {
+               return "Id=" + Id + ",  Name=" + Name + ",  Memory=" + Memory;
+            }
+        }
+
+        static void DisplayPrcoesses()
+        {
+            List<ProcessData> processes = new List<ProcessData>();
+            foreach (Process process in Process.GetProcesses())
+            {
+                ProcessData data = new ProcessData();
+                data.Id = process.Id;
+                data.Name = process.ProcessName;
+                data.Memory = process.WorkingSet64;
+                processes.Add(data);
+                Console.WriteLine(data.ToString());
+            }
+
+        }
+        static void Main(string[] args)
+        {
+            DisplayPrcoesses();
+            Console.ReadKey();
+        }
+}
 ```
 - 코드가 원하는 것을 출력해주지만 아직 중복된 정보가 있음
 - 객체의 형이 두 번 명시되어 있음 

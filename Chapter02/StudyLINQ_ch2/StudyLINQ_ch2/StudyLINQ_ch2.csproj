@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{FD1ACA74-04C1-4B7D-8BC5-D8CD0B7673EF}</ProjectGuid>
+    <ProjectGuid>{FFAAEF58-7DFB-4DC2-93CB-B61DAC58EB61}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>StudyLINQ_ch1</RootNamespace>
-    <AssemblyName>StudyLINQ_ch1</AssemblyName>
+    <RootNamespace>StudyLINQ_ch2</RootNamespace>
+    <AssemblyName>StudyLINQ_ch2</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -41,11 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HelloLinqToSql.cs" />
+    <Compile Include="LanguageFeatures.cs" />
+    <Compile Include="LanguageFeatures2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
