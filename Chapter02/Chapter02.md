@@ -100,12 +100,107 @@ class LanguageFeatures
 - 앞으로는 코드를 더 간결하게, 불필요한 중복을 피할 수 있게 할 것임
 
 ## 2.2 암시적으로 형이 정의된 로컬 변수
+`var i = 5;`
+- C# 3.0은 명시적으로 형 지정하지 않고 로컬 변수를 선언 가능한 var이라는 새로운 키워드를 제공함
+- 로컬 변수를 선언하면서 var 키워드 사용하면 컴파일러는 그 변수를 초기화할 때, 사용하는 식에서 형을 추론하여 설정함.
+- 예제 코드를 이 새로운 키워드를 사용해서 수정하자!
+
 ### 2.2.1 문법
+- var 키워드는 사용하기가 쉬움
+- 이것을 사용하기 위해서는 생성하려는 로컬 변수 이름 앞에 var 키워드를 붙여주고 초기화 식으로 초기화하기만 하면 됨
+
+- 명시적으로 형을 선언한 변수들을 사용한 코드와 명시적으로 형을 선언하지 않은 변수를 사용한 코드를 비교해보자!
+1.
+```C#
+var i = 12;
+var s = "Hello";
+var d= 1.0;
+var numbers = new int[] {1,2,3};
+var process = new ProcessData();
+var processes = 
+    new Dictionary<int, ProcessData>();
+```
+
+2.
+```C#
+int i = 12;
+string s = "Hello";
+double d= 1.0;
+int[] numbers = new int[] {1,2,3};
+ProcessData process = new ProcessData();
+Dictionary<int, ProcessData> processes = 
+    new Dictionary<int, ProcessData>();
+```
+- 명시적으로 형을 선언하지는 않았지만, var 키워드를 이용해서 생성한 변수는 필수적으로 형을 갖게 됨
+
 ### 2.2.2 앞의 에제를 암시적으로 형을 정의한 로컬 변수를 이용하여 개선시키기
+```C#
+```
+- 이 예제 코드는 앞선 코드와 완벽히 동일하게 동작함
+- 간단하고 간소한 문법을 사용하면서도 엄격하고 명시적으로 형을 선언한 것처럼 컴파일 시 validation이나 IntelliSense의 혜택을 받을 수 있음
+
+- 꼭 필요한 곳에만 사용하도록 주의해아 함
+- 예제를 조금 더 발전시켜보자~!(ProcessData 객체를 초기화하는 것이 매우 길고 번잡한 코드를 필요로 함-> 개선시켜보자)
 
 ## 2.3 객체와 컬렉션 초기화 함수
+`new Point{X=1, Y=2}`
+- 객체와 컬렉션을 초기화하는 방법에 대한 소개로부터 시작할 것!
+- 새롭게 배운 객체 초기화 함수를 통해 예제 코드를 한 번 더 수정할 것!
+
 ### 2.3.1 객체 초기화 함수의 필요성
+- 객체 초기화 함수는 어떤 객체의 하나 이상의 속성값에 단 한줄의 명령만으로 값을 설정 가능하게 함
+- 이 도구는 모든 종류의 객체에 대해 선언적으로 초기화가 가능하게 해줌
+- 지금까지는 기본형이나 배열형의 객체에 대해 다음과 같은 형태로 초기화가 가능했었음
+```C#
+int i = 12;
+string s = "abc";
+string[] names = {"LLINQ", "In", "Action"};
+```
+- 그러나 다른 형태의 객체에 이러한 간단하 방법으로 초기홯할 수 있는 방법은 없었음
+- 그렇게 하기 위해서 이런 구질구질한 코드를 작성해야 했었음
+```C#
+ProcessData data = new ProcessData();
+data.Id = 123;
+data.Name = "MyProcess";
+data.Memory = 123456;
+```
+- C# 3.0 을 출발점으로 해서 간편해진 초기화 함수를 이용하여 모든 개체를 초기화할 수 있게 됨
+```C#
+var data = new ProcessData { Id=123, Name="MyProcess", Memory=123456};
+```
+- 생성자를 사용하는 것이 필요하거나 유용한 상황에서도 이런 객체 초기화 함수를 사용 가능함.
+- 다음 예에서는 객체 초기화 함수를 함께 사용하여 객체를 생성하고 있음
+
+```C#
+throw new Exception("message") {Source = "LINQ in Action"};
+```
+- 여기서는 Message(생성자 통해서), Source(객체 초기화 도구를 이용해서) 두 개의 프로퍼티를 한 줄의 코드로 초기화함
+- 만약 새로운 문법 활용하지 않았다면 다음의 코드처럼 되었을 것
+```C#
+var exception = new Exception("message");
+exception.Source = "LINQ in Action";
+throw exception;
+```
+
 ### 2.3.2 컬렉션 초기화 함수
+- 컬렉션 초기화 함수라는 다른 종류의 초기화 함수가 추가됨
+- 이 문법은 다양한 여러 종류의 컬렉션이 System.Collections.IEnumerable만 제대로 구현하고 있다면 Add 메소드를 사용한 것과 같은 결과를 얻을 수 있게 해줌
+
+`var digits = new List<int> {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};`
+
+- 예전에는 아래와 같은 코드를 작성해야 했음
+- 이제는 위의 코드를 작성하면 컴파일러가 알아서 아래와 같은 코드로 변환시킨 후 컴파일해줌
+
+```C#
+List<int> digits = new List<int>();
+digits.Add(0);
+digits.Add(1);
+digits.Add(2);
+...
+digits.Add(9);
+```
+- 객체와 컬렉션 초기화 도구를 사용한 코드와 그렇지 않은 코드의 차이를 보자!
+
 ### 2.3.3 객체 초기화 함수를 이용하여 예제 개선시키기
 
 ## 2.4 람다 표현식
