@@ -200,9 +200,57 @@ digits.Add(2);
 digits.Add(9);
 ```
 - 객체와 컬렉션 초기화 도구를 사용한 코드와 그렇지 않은 코드의 차이를 보자!
+[컬렉션 초기화 도구를 사용한 코드]
+```C#
+var processes = new List<ProcessData>{
+    new ProcessData {Id=123, Name="devenv"},
+    new ProcessData {Id=456, Name="firefox"}
+}
+```
+[컬렉션 초기화 도구를 사용하지 않은 코드]
+```C#
+ProcessData tmp;
+var processes = new List<ProcessData>();
+tmp = new ProcessData();
+tmp.Id=123;
+tmp.Name="devenv";
+processes.Add(tmp);
+tmp = new ProcessData();
+tmp.Id=456;
+tmp.Name="firefox";
+processes.Add(tmp);
+```
+- IEnumerable 인터페이스를 구현하는 클래스로 표현됨
+- 여기서는 {x,y,z} 같은 형태의 문법을 사용해서 Add 메소드에 넣고자 했던 매개변수들을 설정 가능함
+- 이는 많은 프레임워크내 기존 컬렉션 클래스들고 서드파티 라이브릴들의 컬렉션 클래스들을 활용 가능하게 해줌
+- 이런 일반화는 다음과 같은 문법을 가진 딕셔너리를 초기화할 수 있게 해줌
+
+`new Dictionary<int, string>{{1, "one"}, {2, "two"}, {3, "three"}}`
 
 ### 2.3.3 객체 초기화 함수를 이용하여 예제 개선시키기
+- ProcessData 객체를 생성하기 위해서는 여러 줄의 코드와 하나의 임시 변수를 이용해야 했음
+```C#
+ProcessData data = new ProcessData();
+data.Id=process.Id;
+data.Name=process.ProcessName;
+data.Memory = process.WorkingSet64;
+processes.Add(data);
+```
+- 하나의 생성자를 추가하는 방법으로 이런 객체를 단 한번에 초기화 가능함
+```C#
+```
+- 생성자를 추가하는 과정은 ProcessData형에 코드를 추가하는 과정이 수반됨
+- 이렇게 추가된 생성자는 앞으로의 용법에 적합하지 않을 수 있음
+- 이를 위한 새로운 방법: **객체 초기화** 문법을 이용하는 것
+```C#
+```
+- 이런 경우 새로운 생성자를 새롭게 정의하지 않아도 됨
 
+- 객체 초기화 도구의 장점들
+    - 하나의 명령문만으로 객체 초기화 가능
+    - 객체들을 초기화하기 위해 별도로 생성자를 정의할 필요 없음
+    - 객체의 다른 속성들을 초기화하기 위해 복수의 생성자를 작성할 필요가 없음
+    
 ## 2.4 람다 표현식
 ### 2.4.1 대리자에 대한 복습
 ### 2.4.2 익명 메소드
