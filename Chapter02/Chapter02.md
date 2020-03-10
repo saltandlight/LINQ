@@ -238,11 +238,81 @@ processes.Add(data);
 ```
 - 하나의 생성자를 추가하는 방법으로 이런 객체를 단 한번에 초기화 가능함
 ```C#
+class LanguageFeatures4
+    {
+        class ProcessData
+        {
+            private string processName;
+            private long workingSet64;
+
+            public ProcessData(int id, string processName, long workingSet64)
+            {
+                Id = id;
+                this.processName = processName;
+                this.workingSet64 = workingSet64;
+            }
+
+            public Int32 Id { get; set; }
+            public Int64 Memory { get; set; }
+            public String Name { get; set; }
+
+            public override string ToString()
+            {
+                return "Id=" + Id + ",  Name=" + Name + ",  Memory=" + Memory;
+            }
+        }
+
+        static void DisplayPrcoesses()
+        {
+            var processes = new List<ProcessData>();
+            foreach (var process in Process.GetProcesses())
+            {
+                processes.Add( new ProcessData(process.Id, process.ProcessName, process.WorkingSet64));
+                System.Console.WriteLine(process.ToString());
+            }
+
+        }
+        static void Main(string[] args)
+        {
+            DisplayPrcoesses();
+            Console.ReadKey();
+        }
+    }
 ```
 - 생성자를 추가하는 과정은 ProcessData형에 코드를 추가하는 과정이 수반됨
 - 이렇게 추가된 생성자는 앞으로의 용법에 적합하지 않을 수 있음
 - 이를 위한 새로운 방법: **객체 초기화** 문법을 이용하는 것
 ```C#
+class LanguageFeatures5
+{
+        class ProcessData
+        {
+            public Int32 Id { get; set; }
+            public Int64 Memory { get; set; }
+            public String Name { get; set; }
+
+            public override string ToString()
+            {
+                return "Id=" + Id + ",  Name=" + Name + ",  Memory=" + Memory;
+            }
+        }
+
+        static void DisplayPrcoesses()
+        {
+            var processes = new List<ProcessData>();
+            foreach (var process in Process.GetProcesses())
+            {
+                processes.Add(new ProcessData { Id = process.Id, Name = process.ProcessName, Memory = process.WorkingSet64 });
+                System.Console.WriteLine(process.ToString());
+            }
+
+        }
+        static void Main(string[] args)
+        {
+            DisplayPrcoesses();
+            Console.ReadKey();
+        }
+}
 ```
 - 이런 경우 새로운 생성자를 새롭게 정의하지 않아도 됨
 
@@ -252,6 +322,7 @@ processes.Add(data);
     - 객체의 다른 속성들을 초기화하기 위해 복수의 생성자를 작성할 필요가 없음
     
 ## 2.4 람다 표현식
+
 ### 2.4.1 대리자에 대한 복습
 ### 2.4.2 익명 메소드
 ### 2.4.3 람다 표현식의 소개
