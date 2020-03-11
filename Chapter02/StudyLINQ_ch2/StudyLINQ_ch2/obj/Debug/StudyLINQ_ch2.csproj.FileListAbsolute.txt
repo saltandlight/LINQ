@@ -3,3 +3,8 @@ c:\users\95hae\onedrive\문서\visual studio 2015\Projects\StudyLINQ_ch2\StudyLI
 c:\users\95hae\onedrive\문서\visual studio 2015\Projects\StudyLINQ_ch2\StudyLINQ_ch2\obj\Debug\StudyLINQ_ch2.csprojResolveAssemblyReference.cache
 c:\users\95hae\onedrive\문서\visual studio 2015\Projects\StudyLINQ_ch2\StudyLINQ_ch2\obj\Debug\StudyLINQ_ch2.exe
 c:\users\95hae\onedrive\문서\visual studio 2015\Projects\StudyLINQ_ch2\StudyLINQ_ch2\obj\Debug\StudyLINQ_ch2.pdb
+D:\LINQ\Chapter02\StudyLINQ_ch2\StudyLINQ_ch2\obj\Debug\StudyLINQ_ch2.exe
+D:\LINQ\Chapter02\StudyLINQ_ch2\StudyLINQ_ch2\obj\Debug\StudyLINQ_ch2.pdb
+D:\LINQ\Chapter02\StudyLINQ_ch2\StudyLINQ_ch2\obj\Debug\StudyLINQ_ch2.csprojResolveAssemblyReference.cache
+D:\LINQ\Chapter02\StudyLINQ_ch2\StudyLINQ_ch2\bin\Debug\StudyLINQ_ch2.exe
+D:\LINQ\Chapter02\StudyLINQ_ch2\StudyLINQ_ch2\bin\Debug\StudyLINQ_ch2.pdb
