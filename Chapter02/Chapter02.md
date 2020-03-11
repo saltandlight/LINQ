@@ -3,7 +3,7 @@
 - LINQ는 C#과 VB.NET을 새로운 구조로 확장함
 - LINQ가 가능하게 하기 위해 C#과 vB.NET이 어떻게 확장되고 개선되었는지를 살펴볼 것
 
-## c2.1 새로운 언어적 측면에서의 개선점
+## 2.1 새로운 언어적 측면에서의 개선점
 - .NET 2.9은 몇몇 중요한 언어 및 프레임워크 측면의 개선사항을 반영함
 - LINQ가 목표로 하고 있는 심도 있는 수준에서의 데이터 통합을 이루려면 매개변수화될 수 있는 형이 필요함
 
@@ -135,6 +135,7 @@ Dictionary<int, ProcessData> processes =
 
 ### 2.2.2 앞의 에제를 암시적으로 형을 정의한 로컬 변수를 이용하여 개선시키기
 ```C#
+
 ```
 - 이 예제 코드는 앞선 코드와 완벽히 동일하게 동작함
 - 간단하고 간소한 문법을 사용하면서도 엄격하고 명시적으로 형을 선언한 것처럼 컴파일 시 validation이나 IntelliSense의 혜택을 받을 수 있음
@@ -332,7 +333,7 @@ class LanguageFeatures5
 
 ### 2.4.1 대리자에 대한 복습
 ```C#
-코드가 들어갈 곳
+
 ```
 - WorkingSet64는 연관된 프로세스에 할당된 물리적 메모리의 양을 나타냄
 - 20메가바이트 이상의 메모리를 할당받은 프로세스를 검색하고 있음
@@ -349,7 +350,7 @@ class LanguageFeatures5
 
 - DisplayProcess 메소드가 서술어(predicate)를 매개변수로 받아들이는 데 사용되는 용법을 보여줌
 ```C#
-코드가 들어갈 곳
+
 ```
 - 예제 코드에 있는 것처럼, DisplayProcesses가 수정된 것을 보면 이제 어떤 필터도 사용 가능하게 됨
 - 이 경우 필터링 메소드는 조건에 맞으면 true를 반환하게 되어있음
@@ -375,10 +376,116 @@ DisplayProcesses( delegate (Process process)
 - 이런 메소드는 리스트나 배열에 대해 상대적으로 적은 코드를 가지고 많은 일을 할 수 있게 해줌
 
 ### 2.4.3 람다 표현식의 소개
+- 다음의 코드는 이전의 코드와 완벽하게 동일한 결과를 가져옴
+`DisplayProcesses(process => process.WorkingSet64 >= 20*1024*1024);`
+
+- 어떤 프로세스가 주어졌을 떄 만약 그 프로세스가 20MB 이상의 메모리를 소비하고 있다면 true를 반환하라
+- 람다 표현식을 사용할 경우, 매개변수의 형이 무엇인지 알려줄 필요가 없음
+- C# 컴파일러는 매개변수의 형을 메소드 시그너처로부터 유추 가능함
 
 #### 람다 표현식과 익명 메소드의 비교
+- C# 2.0은 익명 메소드라는 방식으로 코드 블록을 대리자가 예상되는 곳에 집어넣을 수 있는 새로운 기능을 도입함
+- 익명 메소드 문법은 비교적 복잡하고 명령적인 형태를 띄고 있음
+- 이와 반대로 람다 표현식은 좀 더 간결하고 함수형 프로그래밍 언어의 형태를 띄고 있어서 이해하기 쉽다는 장점이 있음
+
+- 람다 표현식은 기능상 다음과 같은 추가기능을 제공하는 익명 메소드의 상위 집합임
+    - 람다 표현식은 매개변수의 형을 추론할 수 있으므로 생략 가능함
+    - 람다 표현식은 명령문 또는 표현식을 그 내용으로 할 수 있으므로 문법상 명령문의 형태만을 띨 수 있는 익명 메소드보다 간결함
+    - 람다 표현식은 매개변수로 주어졌을 때 형 매개변수를 추론 가능, 메소드 오버로드 분석에 사용될 수 있음
+    - 표현식을 그 내용으로 하는 람다 표현식은 표현식 트리로 변환될 수 있음
 
 #### 람다 표현식을 나타내는 방법
+- C#에서 람다 표현식은 매개변수를 나열한 후 "=>"를 쓰고 표현식이나 선언문으로 다음처럼 나타낼 수 있음
+```C#
+process         =>              process.WorkingSet64 >= 20*1024*1024;
+입력 매개변수   람다연산자          표현식 또는 문장 블록
+```
+- 람다 연산자는 "goes to"의 의미임
+- 연산자의 좌변은 입력 매개변수
+- 연산자의 우변은 해석될 표현식이나 문장
+
+- 람다 표현식의 종류
+    - 표현식 람다: 우변에 표현식을 갖고 있는 람다 표현식
+    - 명령문 람다: 우변에 중괄호로 묶인 가변 개수의 문장이 올 수 있음
+
+[C#으로 작성된 람다 표현식의 예]
+```C#
+//암묵적으로 형을 갖는 표현식
+x => x+1; 
+//암묵적으로 형을 갖는 명령문
+x => {return x+1;}
+//명시적으로 형을 갖는 표현식
+(int x) => x+1;
+//명시적으로 형을 갖는 명령문
+(int x) => {return x+1;}
+//복수의 매개변수
+(x, y) => x*y;
+//매개변수가 없는 표현식
+() => 1
+//매개변수가 없는 명령문
+() => Console.WriteLine() customer => customer.Name
+person => person.City == "Paris"
+(person, minAge) => person.Age >= minAge
+```
+
+- 람다 표현식은 대리자와 매우 유사한 점이 많음
+- 람다 표현식이 대리자와 얼마나 잘 어울리는지 살펴보자!(몇 가지 대리자형을 이용해보자)
+
+- System.Action<T>, System.Converter<TInput, TOutput>, System.Predicate<T>와 가은 일반 대리자형들은 .NET 2.0에서 도입됨
+```C#
+    delegate void Action<T>(T obj);
+    delegate TOutput Converter<TInput, TOutput>(TInput input);
+    delegate Boolean Predicate<T>(T obj);
+```
+- 이보다 이전 버전의 .NET에서 도입된 대리자형은 MethodInvoker
+- 이 형은 매개변수를 받아들이지 않고 결과도 내놓지 않는 형태의 아무 메소드나 나타낼 수 있음
+`   delegate void MethodInvoker();`
+- MethodInvoker는 Window Forms 형태의 애플리케이션이 아니더라도 유용하게 사용될 수 있음
+- 그러나... System.Windows.Forms 네임스페이스 내에 정의된 것은 매우 유감스러운 것...
+- 매개변수를 받아들이지 않는 새로운 Action이라는 대리자형이 System.Core.dll 어셈블리에 포함되어 System 네임스페이스에 추가될 것으로 보임
+`delegate void Action();`
+
+- 상당히 많은 종류의 새로운 대리자형이 System.Core.dll 속에 담겨 System 네임스페이스에 추가되었음
+```C#
+    delegate void Action<T1, T2>(T1 arg1, T2 arg2);
+    delegate void Action<T1, T2, T3>(T1 arg1, T2 arg2, T3 arg3);
+    delegate void Action<T1, T2, T3, T4>(T1 arg1, T2 arg2, T3 arg3, T4 arg4);
+    delegate TResult Func<TResult>();
+    delegate TResult Func<T, TResult>(T arg);
+    delegate TResult Func<T1, T2, TResult>(T1 arg1, T2 arg2);
+    delegate TResult Func<T1, T2, T3, TResult>(T1 arg1, T2 arg2, T3 arg3);
+    delegate TResult Func<T1, T2, T3, T4, TResult>(T1 arg1, T2 arg2, T3 arg3, T4 arg4); 
+```
+
+- 람다 표현식은 다음 같은 조건들을 충족시킬 경우 대리자와의 호환성을 가짐
+    - 람다는 대리자형과 동수의 매개변수들을 가져야 함
+    - 각각의 입력 매개변수들은 상응하는 대리자의 매개변수로 암묵적으로 변환이 가능해야 함
+    - 람다의 반환값이 있다면 대리자의 반환형으로 암묵적으로 변환이 가능해야 함
+
+[C#에서 대리자로 선언된 람다 표현식]
+```C#
+//매개변수가 없는 경우
+Func<DateTime> getDateTime = () => DateTime.Now;
+//암묵적으로 형을 갖는 문자열 매개변수
+Action<string> printImplicit = s => Console.WriteLine(s);
+//명시적으로 형을 갖는 문자열 매개변수
+Action<string> printExplicit = (string s) => Console.WriteLine(s);
+//두 개의 암묵적으로 형을 갖는 매개변수
+Func<int, int, int> sumInts = (x, y) => x+y;
+//동등하지만 호환이 안 되는 경우
+Predicate<int> equalsOne1 = x => x == 1;
+Func<int, bool> equalsOne2 = x => x ==1;
+//같은 람다 표현식이지만 다른 대리자형을 갖는 경우
+Func<int, int> incInt = x => x+1;
+Func<int, double> incIntAsDouble = x => x+1;
+//명령문과 명시적인 형을 갖는 매개변수
+Func<int, int, int> comparer = (int x, int y) =>
+{
+    if(x>y) return 1;
+    if(x<y) return -1;
+    return 0;
+};
+```
 
 ### 2.5 확장 메소드
 `static void Dump(this object o);`
@@ -653,6 +760,8 @@ Class4.Method1
 
 - 확장 메소드 기능을 사용하면 예제코드를 아주 효율적으로 작성 가능함
 ## 2.6 익명형
+- 객체 초기화 도구와 유사한 문법을 사용하면서 익명형을 생성할 수 있음
+
 ### 2.6.1 익명형을 이용하여 데이터를 객체로 그룹하하기
 ### 2.6.2 이름이 없어도 형은 형이다
 ### 2.6.3 익명형을 사용하여 예제 개선시키기
