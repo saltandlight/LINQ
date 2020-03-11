@@ -366,9 +366,6 @@ class LanguageFeatures5
 
 ### 2.4.1 대리자에 대한 복습
 ```C#
-<<<<<<< HEAD
-
-=======
 static void DisplayPrcoesses()
 {
     var processes = new List<ProcessData>();
@@ -381,7 +378,6 @@ static void DisplayPrcoesses()
         }
     }
 }
->>>>>>> 0710eb2a9afbef6474d3385c0dd2b17946ab6554
 ```
 - WorkingSet64는 연관된 프로세스에 할당된 물리적 메모리의 양을 나타냄
 - 20메가바이트 이상의 메모리를 할당받은 프로세스를 검색하고 있음
@@ -398,9 +394,6 @@ static void DisplayPrcoesses()
 
 - DisplayProcess 메소드가 서술어(predicate)를 매개변수로 받아들이는 데 사용되는 용법을 보여줌
 ```C#
-<<<<<<< HEAD
-
-=======
 static void DisplayPrcoesses(Predicate<Process> match)
 {
     var processes = new List<ProcessData>();
@@ -413,7 +406,6 @@ static void DisplayPrcoesses(Predicate<Process> match)
         }
     }
 }
->>>>>>> 0710eb2a9afbef6474d3385c0dd2b17946ab6554
 ```
 - 예제 코드에 있는 것처럼, DisplayProcesses가 수정된 것을 보면 이제 어떤 필터도 사용 가능하게 됨
 - 이 경우 필터링 메소드는 조건에 맞으면 true를 반환하게 되어있음
@@ -824,10 +816,46 @@ Class4.Method1
 - 확장 메소드 기능을 사용하면 예제코드를 아주 효율적으로 작성 가능함
 ## 2.6 익명형
 - 객체 초기화 도구와 유사한 문법을 사용하면서 익명형을 생성할 수 있음
+- 익명형이 실제 형인지 알아보고 이 방식의 한계점을 알아볼 것
 
 ### 2.6.1 익명형을 이용하여 데이터를 객체로 그룹하하기
+- 예를 들어, 연산의 결과물을 모두 함께 그룹화하려는 경우, 이 정보를 객체화하여 담아두려고 한다고 하자
+- 임시 저장 목적을 위해 특정한 형을 정의하고 사용하는 것은 번거로운 일...!
+
+[C#에서 익명형을 이용할 수 있는 방법]
+```C#
+var results = new {
+    TotalMemory = processes.TotalMemory()/1024/1024,
+    Top2Memory = top2Memory,
+    Processes = processes
+};
+```
 ### 2.6.2 이름이 없어도 형은 형이다
+- 익명형은 이름이 없지만 분형히 형이다
+- 컴파일러가 동적으로 실제의 형을 추론하여 생성@
+- 예제를 살펴보면 프로퍼티들의 형은 초기화 도구에 의해 추론되고 있음
+
+- 컴파일러는 같은 프로그램 내에서 같은 이름과 형을 프로퍼티로 가진 익명형이 있는 경우, 두 형이 같다고 판단할 수 있다는 점에 주의해야 함
+- 이 두 줄을 수행시킬 경우 컴파일러는 하나의 형만을 자동으로 생성하게 됨
+```c#
+    var v1 = new { Person = "Suzie", Age=32, CanCode = true}
+    var v2 = new { Person = "Barney", Age=29, CanCode = false}
+```
+- 이 때 다음과 같은 세 번째 줄을 추가하면 프로퍼티의 순서가 바뀌어서 v3을 위해 새로운 형이 생성됨
+`var v3 = new {Age=17,  Person="Bill", CanCode=false}`
+
 ### 2.6.3 익명형을 사용하여 예제 개선시키기
+- ProcessData 객체 제거가 가능함
+- ProcessData 클래스 대신에 익명형을 이용하는 DisplayProcesses 메소드를 보여줌
+```C#
+```
+- ProcessData 클래스를 선언할 필요가 없어짐
+- 그러나... 익명형에도 수많은 제약사항이 있음
+
 ### 2.6.4 제약사항
+- TotalMemory 메소드는 ProcessData 객체들과 사용할 수 있도록 정의되어 있음
+- ProcessData 클래스를 없앤다면 곤란한 상황에 직면하게 됨
+
+#### 키를 가진 익명형
 
 ## 2.7 요약
