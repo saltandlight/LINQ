@@ -848,6 +848,36 @@ var results = new {
 - ProcessData 객체 제거가 가능함
 - ProcessData 클래스 대신에 익명형을 이용하는 DisplayProcesses 메소드를 보여줌
 ```C#
+class LlanguageFeatures7
+    {
+        
+        static void DisplayPrcoesses(Predicate<Process> match)
+        {
+            var processes = new List<Object>();
+            foreach (var process in Process.GetProcesses())
+            {
+                if (match(process))
+                {
+                    processes.Add(new {
+                        process.Id,
+                        process.ProcessName,
+                        process.WorkingSet64 });
+                    System.Console.WriteLine(process.ToString());
+                }
+            }
+        }
+
+        static Boolean Filter(Process process)
+        {
+            return process.WorkingSet64 >= 20 * 1024 * 1024;
+        }
+
+        static void Main(string[] args)
+        {
+            DisplayPrcoesses(Filter);
+            Console.ReadKey();
+        }
+    }
 ```
 - ProcessData 클래스를 선언할 필요가 없어짐
 - 그러나... 익명형에도 수많은 제약사항이 있음
