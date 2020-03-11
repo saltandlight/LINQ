@@ -135,7 +135,40 @@ Dictionary<int, ProcessData> processes =
 
 ### 2.2.2 앞의 에제를 암시적으로 형을 정의한 로컬 변수를 이용하여 개선시키기
 ```C#
+class LanguageFeatures3
+    {
+        class ProcessData
+        {
+            public Int32 Id { get; set;}
+            public Int64 Memory { get; set; }
+            public String Name { get; set; }
 
+            public override string ToString()
+            {
+                return "Id=" + Id + ",  Name=" + Name + ",  Memory=" + Memory;
+            }
+        }
+
+        static void DisplayPrcoesses()
+        {
+            var processes = new List<ProcessData>();
+            foreach (var process in Process.GetProcesses())
+            {
+                var data = new ProcessData();
+                data.Id = process.Id;
+                data.Name = process.ProcessName;
+                data.Memory = process.WorkingSet64;
+                processes.Add(data);
+                Console.WriteLine(data.ToString());
+            }
+
+        }
+        static void Main(string[] args)
+        {
+            DisplayPrcoesses();
+            Console.ReadKey();
+        }
+    }
 ```
 - 이 예제 코드는 앞선 코드와 완벽히 동일하게 동작함
 - 간단하고 간소한 문법을 사용하면서도 엄격하고 명시적으로 형을 선언한 것처럼 컴파일 시 validation이나 IntelliSense의 혜택을 받을 수 있음
@@ -333,7 +366,22 @@ class LanguageFeatures5
 
 ### 2.4.1 대리자에 대한 복습
 ```C#
+<<<<<<< HEAD
 
+=======
+static void DisplayPrcoesses()
+{
+    var processes = new List<ProcessData>();
+    foreach (var process in Process.GetProcesses())
+    {
+        if (process.WorkingSet64 >= 20 * 1024 * 1024)
+        {
+            processes.Add(new ProcessData(process.Id, process.ProcessName, process.WorkingSet64));
+            System.Console.WriteLine(process.ToString());
+        }
+    }
+}
+>>>>>>> 0710eb2a9afbef6474d3385c0dd2b17946ab6554
 ```
 - WorkingSet64는 연관된 프로세스에 할당된 물리적 메모리의 양을 나타냄
 - 20메가바이트 이상의 메모리를 할당받은 프로세스를 검색하고 있음
@@ -350,7 +398,22 @@ class LanguageFeatures5
 
 - DisplayProcess 메소드가 서술어(predicate)를 매개변수로 받아들이는 데 사용되는 용법을 보여줌
 ```C#
+<<<<<<< HEAD
 
+=======
+static void DisplayPrcoesses(Predicate<Process> match)
+{
+    var processes = new List<ProcessData>();
+    foreach (var process in Process.GetProcesses())
+    {
+        if (match(process))
+        {
+            processes.Add(new ProcessData { Id = process.Id, Name = process.ProcessName, Memory = process.WorkingSet64 });
+            System.Console.WriteLine(process.ToString());
+        }
+    }
+}
+>>>>>>> 0710eb2a9afbef6474d3385c0dd2b17946ab6554
 ```
 - 예제 코드에 있는 것처럼, DisplayProcesses가 수정된 것을 보면 이제 어떤 필터도 사용 가능하게 됨
 - 이 경우 필터링 메소드는 조건에 맞으면 true를 반환하게 되어있음
