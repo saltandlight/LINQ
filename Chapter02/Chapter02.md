@@ -331,8 +331,54 @@ class LanguageFeatures5
 - 예제에 필터링 기능을 추가하기 위해서는 어떤 메소드를 다른 메소드에 매개변수로 넘겨줄 수 있도록 하는 대리자(delegate)라는 아이를 사용 가능함
 
 ### 2.4.1 대리자에 대한 복습
+```C#
+코드가 들어갈 곳
+```
+- WorkingSet64는 연관된 프로세스에 할당된 물리적 메모리의 양을 나타냄
+- 20메가바이트 이상의 메모리를 할당받은 프로세스를 검색하고 있음
+
+- 다음과 같은 코드의 필터링 메소드는 하나의 Process 객체를 매개변수로 받아들여 어떤 프로세스가 특정 조건에 적합한지 알려주는 Boolean 값을 반환함
+`delegate Boolean FilterDelegate(Process process);`
+
+- 이런 방법 대신 .NET 2.0이 제공하는 Predicate<T> 형을 이용 가능함
+`delegate Boolean Predicate<T>(T obj);`
+
+- Predicate<T> 대리자 형식은 입력에 따라 true와 false를 반환하는 메소드를 표현함
+- 이 형이 일반적이기 때문에 이것이 Process 객체에 동작한다는 것을 알려주어야 함
+- 여기서 사용하는 정확한 대리자 형식은 Predicate<Process>임.
+
+- DisplayProcess 메소드가 서술어(predicate)를 매개변수로 받아들이는 데 사용되는 용법을 보여줌
+```C#
+코드가 들어갈 곳
+```
+- 예제 코드에 있는 것처럼, DisplayProcesses가 수정된 것을 보면 이제 어떤 필터도 사용 가능하게 됨
+- 이 경우 필터링 메소드는 조건에 맞으면 true를 반환하게 되어있음
+```C#
+static Boolean Filter(Process process)
+{
+    return process.WorkingSet64 >= 20*1024*1024;
+}
+```
+- 메소드를 사용하기 위해서 메소드를 DisplayProcesses 메소드에 매개변수로 넘겨줘야 함
+`DisplayProcesses(Filter);`
+
 ### 2.4.2 익명 메소드
+- 익명 메소드를 사용하게 되면 좀 더 간결한 코드를 작성할 수 있도록 명시적으로 지정한 메소드를 사용하지 않아도 됨
+- 익명 메소드 덕분에 Filter와 같은 메소드를 선언하지 않고 다음과 같이 DisplayProcesses에 곧바로 코드를 집어넣을 수 있음
+```C#
+DisplayProcesses( delegate (Process process)
+{ return process.WorkingSet64 >= 20*1024*1024; });
+```
+- 익명 메소드는 함수 객체와 유사하게 멋지게 한 줄의 코드로 컬렉션 내의 항목들을 수정하는 용도로 사용 가능함
+- .NET 2.0은 System.Collection.Generic.List<T>와 System.Array에 익명 메소드를 사용할 수 있도록 특화되어 설계된 몇 개의 메소드를 포함시켰음
+- 이런 메소드에는 ForEach, Find, FindAll과 같은 메소드가 있음
+- 이런 메소드는 리스트나 배열에 대해 상대적으로 적은 코드를 가지고 많은 일을 할 수 있게 해줌
+
 ### 2.4.3 람다 표현식의 소개
+
+#### 람다 표현식과 익명 메소드의 비교
+
+#### 람다 표현식을 나타내는 방법
 
 ### 2.5 확장 메소드
 `static void Dump(this object o);`
