@@ -3,7 +3,7 @@
 - LINQ는 C#과 VB.NET을 새로운 구조로 확장함
 - LINQ가 가능하게 하기 위해 C#과 vB.NET이 어떻게 확장되고 개선되었는지를 살펴볼 것
 
-## c2.1 새로운 언어적 측면에서의 개선점
+## 2.1 새로운 언어적 측면에서의 개선점
 - .NET 2.9은 몇몇 중요한 언어 및 프레임워크 측면의 개선사항을 반영함
 - LINQ가 목표로 하고 있는 심도 있는 수준에서의 데이터 통합을 이루려면 매개변수화될 수 있는 형이 필요함
 
@@ -135,6 +135,40 @@ Dictionary<int, ProcessData> processes =
 
 ### 2.2.2 앞의 에제를 암시적으로 형을 정의한 로컬 변수를 이용하여 개선시키기
 ```C#
+class LanguageFeatures3
+    {
+        class ProcessData
+        {
+            public Int32 Id { get; set;}
+            public Int64 Memory { get; set; }
+            public String Name { get; set; }
+
+            public override string ToString()
+            {
+                return "Id=" + Id + ",  Name=" + Name + ",  Memory=" + Memory;
+            }
+        }
+
+        static void DisplayPrcoesses()
+        {
+            var processes = new List<ProcessData>();
+            foreach (var process in Process.GetProcesses())
+            {
+                var data = new ProcessData();
+                data.Id = process.Id;
+                data.Name = process.ProcessName;
+                data.Memory = process.WorkingSet64;
+                processes.Add(data);
+                Console.WriteLine(data.ToString());
+            }
+
+        }
+        static void Main(string[] args)
+        {
+            DisplayPrcoesses();
+            Console.ReadKey();
+        }
+    }
 ```
 - 이 예제 코드는 앞선 코드와 완벽히 동일하게 동작함
 - 간단하고 간소한 문법을 사용하면서도 엄격하고 명시적으로 형을 선언한 것처럼 컴파일 시 validation이나 IntelliSense의 혜택을 받을 수 있음
