@@ -6,20 +6,10 @@ using System.Text;
 
 namespace StudyLINQ_ch2
 {
-    class LanguageFeatures4
+    class LlanguageFeatures6
     {
         class ProcessData
         {
-            private string processName;
-            private long workingSet64;
-
-            public ProcessData(int id, string processName, long workingSet64)
-            {
-                Id = id;
-                this.processName = processName;
-                this.workingSet64 = workingSet64;
-            }
-
             public Int32 Id { get; set; }
             public Int64 Memory { get; set; }
             public String Name { get; set; }
@@ -30,23 +20,29 @@ namespace StudyLINQ_ch2
             }
         }
 
-        static void DisplayPrcoesses()
+        static void DisplayPrcoesses(Predicate<Process> match)
         {
             var processes = new List<ProcessData>();
             foreach (var process in Process.GetProcesses())
             {
-                if (process.WorkingSet64 >= 20 * 1024 * 1024)
+                if (match(process))
                 {
-                    processes.Add(new ProcessData(process.Id, process.ProcessName, process.WorkingSet64));
+                    processes.Add(new ProcessData { Id = process.Id, Name = process.ProcessName, Memory = process.WorkingSet64 });
                     System.Console.WriteLine(process.ToString());
                 }
             }
-
         }
+
+        static Boolean Filter(Process process)
+        {
+            return process.WorkingSet64 >= 20 * 1024 * 1024;
+        }
+
         static void Main(string[] args)
         {
-            DisplayPrcoesses();
+            DisplayPrcoesses(Filter);
             Console.ReadKey();
         }
+        
     }
 }

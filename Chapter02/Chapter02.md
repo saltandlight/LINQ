@@ -332,7 +332,18 @@ class LanguageFeatures5
 
 ### 2.4.1 대리자에 대한 복습
 ```C#
-코드가 들어갈 곳
+static void DisplayPrcoesses()
+{
+    var processes = new List<ProcessData>();
+    foreach (var process in Process.GetProcesses())
+    {
+        if (process.WorkingSet64 >= 20 * 1024 * 1024)
+        {
+            processes.Add(new ProcessData(process.Id, process.ProcessName, process.WorkingSet64));
+            System.Console.WriteLine(process.ToString());
+        }
+    }
+}
 ```
 - WorkingSet64는 연관된 프로세스에 할당된 물리적 메모리의 양을 나타냄
 - 20메가바이트 이상의 메모리를 할당받은 프로세스를 검색하고 있음
@@ -349,7 +360,18 @@ class LanguageFeatures5
 
 - DisplayProcess 메소드가 서술어(predicate)를 매개변수로 받아들이는 데 사용되는 용법을 보여줌
 ```C#
-코드가 들어갈 곳
+static void DisplayPrcoesses(Predicate<Process> match)
+{
+    var processes = new List<ProcessData>();
+    foreach (var process in Process.GetProcesses())
+    {
+        if (match(process))
+        {
+            processes.Add(new ProcessData { Id = process.Id, Name = process.ProcessName, Memory = process.WorkingSet64 });
+            System.Console.WriteLine(process.ToString());
+        }
+    }
+}
 ```
 - 예제 코드에 있는 것처럼, DisplayProcesses가 수정된 것을 보면 이제 어떤 필터도 사용 가능하게 됨
 - 이 경우 필터링 메소드는 조건에 맞으면 true를 반환하게 되어있음
