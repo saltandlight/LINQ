@@ -361,9 +361,10 @@ static class HelloWorld
 ```
 
 [예제: VB.NET으로 작성한 Hello LINQ]
+
 ```VB.NET
 Module HelloWorld
-  Sub Main()
+  Sub Main()++
     Dim words As String() =
       {"hello", "wonderful", "linq", "beautiful", "world"};
 

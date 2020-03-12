@@ -4,7 +4,7 @@
 
 - Chapter02. 개선된 C#과 VB.NET의 언어상 기능
 
-- Chapter04
+- Chapter04. LINQ to Objects와 친해지기
 
 - Chapter06
 
