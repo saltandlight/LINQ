@@ -49,7 +49,7 @@ namespace StudyLINQ_ch2
             };
             ObjectDumper.Write(results, 1);
             ObjectDumper.Write(processes);
-        }
+        }0
 
         static Int64 TotalMemory(this IEnumerable<ProcessData> processes)
         {
