@@ -46,6 +46,124 @@ Book, Author, Publisher, Subject, Review, User
 - **시퀀스**: 
     - LINQ의 세계에서 IEnumerable<T>를 구현하는 객체들
     
+##### 배열
+
+- 모든 종류의 배열을 지원하고 있음
+
+- 형이 정해지지 않은 배열을 LINQ to Objects를 이용하여 질의하기
+
+  ```C#
+  using System;
+  using System.Linq;
+  
+  static class TestArray
+  {
+      static void Main()
+      {
+          Object[] array = {"String", 12, true, 'a'};
+          var types = 
+              array
+              	.Select(item => item.GetType().Name)
+              	.OrderBy(type => type);
+          ObjectDumper.Write(types);
+      }
+  }
+  ```
+
+  - 결과물
+
+    ```C#
+    Boolean
+    Char
+    Int32
+    String
+    ```
+
+- 질의들은 사용자 정의 객체의 배열에 대해서도 수행 가능함
+
+- Book 객체의 배열에 대한 질의를 수행
+
+- 형을 가진 배열에 대해 LINQ to Objects 로 질의하기
+
+  ```C#
+  using System;
+  using System.Collections.Generic;
+  using System.Linq;
+  using LinqInAction.LinqBooks.Common;
+  
+  static class TestArray
+  {
+      static void Main()
+      {
+          Book[] books = 
+          {
+              new Book{Title = "LINQ in Action"},
+              new Book{Title="LINQ for Fun"},
+              new Book{Title = "Extreme LINQ"}
+          };
+          
+          var titles = 
+              books
+              .Where(book => book.Title.Contains("Action"))
+              .Select(book => book.Title);
+          
+          Object.Dumper.Write(titles);
+      }
+  }
+  ```
+
+- LINQ to Objects 질의는 어떤 데이터형의 질의에도 사용 가능함
+
+##### 제너릭 리스트
+
+- LINQ to Objects 는 List<T>를 비롯하여 다른 제네릭 리스트형에도 적용이 가능함
+
+- 주요 제너릭 리스트형의 목록
+
+  - System.Collections.Generic.List<T>
+  - System.Collections.Generic.LinkedList<T>
+  - System.Collections.Generic.Queue<T>
+  - System.Collections.Generic.Stack<T>
+  - System.Collections.Generic.HashSet<T>
+  - System.Collections.ObjectModel.Collection<T>
+  - System.ComponentModel.BindingList<T>
+
+- 제너릭 리스트에 대해 LINQ to Objects로 질의하기 
+
+  ```C#
+  using System;
+  using System.Collections.Generic;
+  using System.Linq;
+  using LinqInAction.LinqBooks.Common;
+  
+  static class TestList
+  {
+      static void Main()
+      {
+          List<Book> books = new List<Book>(){
+              new Book {Title = "LINQ in Action"},
+              new Book {Title = "LINQ for Fun"},
+              new Book {Title = "Extreme LINQ"}
+          };
+          
+          var titles = 
+              books
+              .Where(book => book.Title.Contains("Action"))
+              .Select(book => book.Title);
+          
+          ObjectDumper.Write(titles);
+      }
+  }
+  ```
+
+- 배열과 리스트 
+
+##### 제너릭 딕셔너리
+
+##### 문자열
+
+##### 기타 컬렉션 객체
+
 ### 4.2.2 지원되는 여러 가지 연산
 
 ## 4.3 LINQ를 ASP.NET과 Windows Forms와 함께 바인딩하기
