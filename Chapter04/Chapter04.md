@@ -368,19 +368,192 @@ public static IEnumerable<S> SelectMany<T, S>(
     this IEnumerable<T> Source,
     Func<T, IEnumerable<S>> selector);
 ```
-
+- SelectMany 연산자는 selector 함수에서 반환된 각각의 시퀀스 내의 개체를 새로운 시퀀스로 매핑해준 다음 결과를 이어 붙여줌
+- Select 의 동작과 비교해보자
+```C#
+IEnumerable<IEnumerable<Autor>> tmp = 
+    SampleData.Books
+    .Select(book => book.Authors);
+foreach(var authors in tmp)
+{
+    foreach(Author author in authors)
+    {
+        Console.WriteLine(author.LastName);
+    }
+}
+```
+- 같은 일을 하는 SelectMany를 통해 구현된 코드
+```C#
+IEnumerable<Author> authors = 
+    SampleData.Books
+    .SelectMany(book => book.Authors);
+foreach(Author author in authors)
+{
+    Console.WRiteLine(ahotr.LastName);
+}
+```
+- 훨씬 짧다
+- 책의 저자들을 여기서 열거하려고 함
+- Book 객체의 Authors 프로퍼티는 Author 객체들의 배열
+- 그래서 Select 연산자는 이드 ㄹ배열이 열거된 형태를 그대로 반환함
+- 그러나...! SelectMany는 이 배열의 개체들을 펼쳐놓고 Author 객체의 시퀀스로 재조합해줌
+[SelectMany가 호출되는 부분에서 사용 가능한 질의식]
+```C#
+from book in SampleData.Books
+from author in book.Authors
+select author.LastName
+```
+- from 절이 연결될 떄마다 SelectMany 사영이 유용하게 이용되고 있음
+- Select와 SelectMany 연산자는 인덱스들과 함께 동작하는 오버로딩된 형태도 제공함
 
 #### 인덱스를 선택하기
-
+- Select와 SelectMany 연산자는 시퀀스 내의 각각의 개체들의 인덱스를 가져오는 데 사용될 수 있음
+- 컬렉션 내의 책을 알파벳순으로 정렬하기 전에 인덱스를 보여준다고 가정해보자
+```C#
+index=3     Title=All your base are belong to us
+index=4     Title=Bonjour monAmour
+index=2     Title=C# on Rails
+index=0     Title=Funny Stories
+index=1     Title=LINQ rules
+```
+- 다음은 Select문으로 문제를 해결하는 것을 보여줌
+[인덱스와 함께 Select 질의 연산자를 사용한 예제]
+```C#
+var books=
+  SampleData.Books
+  .Select((book, index) => new {index, book.Title})
+  .OrderBy(book => book.Title);
+```
+- 질의 표현식 구문을 이용할 수 없음 
+- 왜? 인덱스를 제공하는 Select 연산자의 변종이 이와 동등한 구문을 제공하지 않았음
+- 이 버전의 Select 메소드가 람다 표현식에서 사용 가능한 인덱스 변수를 제공한다는 사실에 주목하자
+- 컴파일러는 자동적으로 인덱스 매개변수의 유무를 통해 어떤 버전의 Select 연산자가 이요오디고 있는지 정함
+- OrderBy를 수행하기 전에 Select를 수행한다는 것을 확인 가능함
+- 책이 정렬되기 전에 인덱스를 가져오는 것은 매우 중요함
 ### 4.4.3 Distinct 이용하기
+- 질의 결과에는 중복이 발생하곤 함
+[책을 쓴 저자의 목록을 반환하는 예시]
+```C#
+var authors = 
+    SampleData.Books
+        .SelectMany(book => book.Authors)
+        .Select(author => author.FirstName+" "+author.LastName);
+```
+- 그러나... 동일한 작가의 이름이 한 번 이상 등장하는 경우가 있음
+- 같은 작가가 책을 여러 권 집필했을 수도 있어서 발생하는 문제
+- 이러한 문제를 피하기 위해 Distinct 연산자를 사용 가능함
+- Distinct 연산자: 어떤 시퀀스 내의 중복된 개체들을 삭제해줌
+- 개체들을 비교하기 위해, Distinct 연산자는 개체가 만약 IEquaTable<T>를 구현하고 있다면, IEquaTable<T>.Equals() 메소드를 호출함
+- 그렇지 않으면 별도로 구현해놓은 Object.Equals 메소드를 사용함
 
+[Distinct 질의 연산자를 사용하여 저자목록 받아오기]
+```C#
+var authors = 
+    SampleData.Books
+        .SelectMany(book => book.Authors)
+        .Distinct()
+        .Select(author => author.FirstName+" "+author.LastName); 
+```
+- Distinct 에 해당하는 동등한 키워드는 C#질의 표현식 구문에 존재하지 않음
+- C#에서 Distinct는 메소드 호출로만 이용될 수 있음
+- 다음에 알아보는 연산자들은 C#이나 VB.NET 모두 대응될 만한 키워드를 갖고 있지 않음
+- 이런 연산자들은 시퀀스를 표준적인 컬렉션 객체로 바꿀 수 있도록 해줌
 ### 4.4.4 변환 연산자 이용하기
+- LINQ는 시퀀스를 손쉽게 다른 컬렉션 형태로 변환 가능한 연산자들을 기본적으로 제공함
+- 예를 들어, ToArray와 ToList 연산자는 시퀀스를 배열이나 리스트의 형태로 변환시켜줌
+- 이런 연산자들은 기존의 코드 라이브러리들과 LINQ를 통합하는 과정에서 매우 유용하게 사용 가능함
+- 이런 변환 연산자들은 배열이나 객체 목록을 받기를 기대하고 있는 메소드들을 다시 활용 가능하게 해줌
 
+- 기본적으로 질의들은 IEnumerable<T>를 구현하는 컬렉션인 시퀀스를 반환함
+```C#
+IEnumerable<String> titles = 
+    SampleData.Books.Select(book => book.Title);
+```
+- 다음은 어떻게 그런 결과가 배열이나 리스트로 변환될 수 있는지 보여줌
+```C#
+String[] array = titles.ToArray();
+List<String> list = titles.ToList();
+```
+- ToArray나 ToList는 질의의 결과를 임시로 저장해두거나 명령과 동시에 질의가 수행되기를 요청할 떄 유용하게 사용 가능함
+- 호출되었을 때, 이 연산자들은 전체 시퀀스를 나열한 후 이 시퀀스에 의해 반환된 개체들의 복제물을 생성함
+
+- 질의는 여러 번 수행 시마다 다른 결과를 반환 가능함
+- 어떤 시퀀스의 특정 시점에서의 스냅샷을 원한다면 ToArray나 ToList를 이용하면 됨
+- 이런 연산자들은 모든 결과 개체들을 호출될 때마다 새로운 배열이나 리스트로 복사할 것임
+- -> 대규모의 시퀀스에 대해 지나친 사용은 자제해야 함
+
+- 실수하기 쉬운 용례: using 블록 내에서 생성된 일회용 객체에 대해 질의를 할 떄, 블록을 벗어나면 객체는 일찍 사라지게 됨
+    - 해결하는 방법: ToList로 결과를 복사한 후 블록을 떠나는 것
+```C#
+IEnumerable<Book> results;
+
+using(var db = new LinqBooksDataContext())
+{
+    results = db.Books.Where(...).ToList();
+}
+
+foreach(var book in resutls)
+{
+    DoSomething(book);
+    yield return book;
+}
+```
+- 재미있는 변환 연산자: ToDictionary
+    - 배열이나 리스트를 생성하는 대신 이 연산자는 딕셔너리를 하나 작성하여 키를 이용하여 데이터를 처리함
+    ```C#
+        Dictionary<String, Book> isbnRef =
+            SampleData.Books.ToDictionary(book => book.Isbn);
+    ```
+    - 여기서는 각각의 책의 ISBN으로 인덱싱된 책의 딕셔너리를 생성
+    - 이런 종류의 변수는 ISBN을 기반으로 책을 검색하는 작업을 쉽게 해줌
+    `Book linqRules = isbnRef["0-111-77777-2"];`
 ### 4.4.5 누적 연산자 이용하기
+- 누적 연산자는 데이터에 몇 가지 수학 함수를 적용하기 위한 표준 질의 연산자들
+    - Count 연산자는 시퀀스 내 개체의 개수를 계산함
+    - Sum은 시퀀스 내 수치값들의 합을 나타냄
+    - Min과 Max는 시퀀스 내의 수치값 중 최저값과 최고값을 찾아줌
+
+- 이렇게 활용이 가능함
+```C#
+var minPrice = SampleData.Books.Min(book => book.Price);
+// 표현식을 만족하는 시퀀스에게만 적용
+var maxPrice = SampleData.Books.Select(book => book.Price).Max();
+// 모든 객체에 대해 적용됨
+var totalPrice = SampleData.Books.Sum(book => book.Price);
+var nbCheapBooks = 
+    SampleData.Books.Where(book => book.Price < 30).Count(); 
+```
+- 모든 누적 연산자들은 selector를 매개변수로 받을 수 있음. 
+- 어떤 오버로딩된 연산자를 사용할지는 사전제한된 시퀀스를 사용하는지 여부에 달림
 
 ## 4.5 메모리 내의 객체 그래프에 대한 뷰 작성하기
 ### 4.5.1 정렬
+- 데이터를 내가 원하는 순서로 정렬해서 보고싶을 때 사용
+- 질의 표현식은 이런 경우에 orderby절을 이용할 수 있게 해줌
+```C#
+from book in SampleData.Books
+ orderby book.Publisher.Name, book.Price descending, book.Title
+ select new { Publisher=book.Publisher.Name,
+              book.Price,
+              book.Title};
+```
+- orderby 키워드는 복수의 정렬 기준을 정해주기 위해 사용 가능함
+- 기본적으로 정렬은 오름차순 그러나 내림차순을 원하면 각 기준별로 하나하나 descending 키워드를 추가하여 설정 가능함
+
+- 질의 표현식의 orderby절은 내부적으로 OrderBy, ThenBy, OrderByDescending, ThenByDescending 연산자에 대한 호출로 전환되어 수행됨
+[질의 연산자로 표현된 예제 코드]
+```C#
+SampleData.Books
+    .OrderBy(book => book.Publisher.Name)
+    .ThenByDescending(book => book.Price)
+    .ThenBy(book => book.Title)
+    .Select(book => new { Publisher = book.Publisher.Name, 
+                          book.Price,
+                          book.Title });
+```
 ### 4.5.2 중첩 질의
+- 중첩 질의를 활용하여 출판사의 이름이 중복되는 경우 없게 할 것임
+
 ### 4.5.3 그룹화하기
 ### 4.5.4 조인 사용하기
 ### 4.5.5 분할
