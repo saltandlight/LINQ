@@ -6,7 +6,7 @@
 
 - Chapter04. LINQ to Objects와 친해지기
 
-- Chapter06
+- Chapter06. LINQ to SQL을 시작하기
 
 - Chapter07
 

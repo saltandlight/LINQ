@@ -31,9 +31,6 @@ Book, Author, Publisher, Subject, Review, User
 
 ### 4.1.5 예시 데이터
 - LINQ to Objects를 시연하기 위해 메모리 내의 데이터를 이용할 것임
-```C#
-
-```
 ## 4.2 LINQ를 메모리 내의 컬렉션과 함께 사용하기
 - LINQ to Objects는 메모리 내의 객체 컬렉션에 대해 동작하는 LINQ 변종
 - 이 아이가 지원하는 컬렉션에는 어떤 것들이 있는가?
