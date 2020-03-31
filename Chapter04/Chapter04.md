@@ -553,7 +553,170 @@ SampleData.Books
 ```
 ### 4.5.2 중첩 질의
 - 중첩 질의를 활용하여 출판사의 이름이 중복되는 경우 없게 할 것임
-
+```C#
+from publisher in SampleData.Publishers
+select publisher
+```
+- 출판사의 이름과 책을 만약 모두 원한다면?
+- Publisher 객체 전체를 반환하는 것이 아니라, Publisher와 Books 두 객체의 정보를 조합하여 가지게 되는 익명형을 반환하여 이 문제를 해결해볼 것임
+```C#
+from publhser in SampleData.Publishers
+select new {Publisher = publisher.Name, Books = ...}
+```
+- 흥미로운 부분: "어떻게 특정 출판사의 책을 골라낼 수 있을까?"
+- 예제 데이터 속에서 책은 Publisher 프로퍼티를 통해 출판사 정보와 연계되어 있음
+- Publisher 객체에서는 이와 유사하게 Book 객체를 찾을 수 있는 고리가 없다
+- 다행히, LINQ는 이런 문제를 해결해줌
+- 첫번째 질의 속에 포함된 간단한 질의를 통해 이런 문제 해결 가능!
+```C#
+from publisher in SampleData.Publishers
+select new {
+    Publisher = publisher.Name, 
+    Books = 
+        from  book in SampleData.Books
+        where book.Publisher.Name == publisher.Name
+        select book
+}
+```
 ### 4.5.3 그룹화하기
+- 그룹화 기능을 통해서 동일한 결과를 낼 수 있음
+```C#
+GridView1.DataSource = 
+    from book in SamplData.Books
+    group book by book.Publisher into publisherBooks
+    select new {  Publisher=publisherBooks.Key.Name, 
+                  Books=publisherBooks };
+```
+- 출판사별로 그룹화된 책의 목록을 받아보고 싶어함
+- 특정한 출판사에 소속된 책은 publisherBooks라는 하나의 그룹 안에 모아질 것임
+- publisherBooks 그룹은 IGrouping<Key, T> 인터페이스의 인스턴스임
+- 다음과 같이 정의됨
+```C#
+public interface IGrouping<TKey, T>:IEnumerable<T>
+{
+    TKey Key {get; }
+}
+```
+- IGrouping  제네릭 인터페이스를 구현하는 객체는 엄격하게 형을 가지는 키를 갖고 있고, 엄격하게 형을 가진 열거형임
+- 이 경우에 키는 Publisher 객체, 열거형은 IEnumerable<Book>형임
+
+- 질의는 출판사의 이름(그룹의 키값)과 책의 사영을 반환함
+- 중첩 질의를 이용한 이전의 예제에서 일어나는 일과 동일함
+
+- 중첩 질의 대신 이전 예제처럼 그룹화 연산자를 이용하는 것은 두 가지의 장점을 가짐
+    - 질의가 더욱 짧아지고 그룹에 이름 지정이 가능
+- 그룹이 무엇으로 구성되었는지 쉽게 알 수 있게 해줌
+```C#
+from book in SampleData.Books
+group book by book.Publisher into publisherBooks
+select new {
+    Publisher = publisherBooks.Key.Name, 
+    Books = publisherBooks,
+    Count = publisherBooks.Count()};
+```
+- 그룹화는 SQL에서 누적 연산자와 함께 흔히 사용됨
+- Count, Sum, Min,Max 같은 누적 연산자들을 종종 사용하게 될 것
 ### 4.5.4 조인 사용하기
+- 중첩 질의와 그룹화 연산자를 이용하여 데이터를 그룹화하는 것과 유사한 결과를 얻는 방법
+- join 연산자는 사영, 중첩 질의, 그룹화 등과 동일한 종류의 연산을 수행 가능하도록 함
+- join 연산자는 SQL과 유사한 문법구조를 가짐
+
+#### 그룹 조인
+[join...into 절을 이용하여 책을 출판사별로 그룹화하기]
+```C#
+from publisher in SampleData.Publishers
+join book in SampleData.Books
+  on publisher equals book.Publisher into publisherBooks
+select new { Publisher = publisher.Name, Books = publisherBooks };
+```
+- 각 출판사의 책을 publisherBooks라고 명명된 시퀀스로 묶음
+- 이 새로운 질의는 group절을 이용하여 작성했던 질의와 동일한 기능을 수행함
+
+#### 내부 조인
+- 두 시퀀스의 교집합을 찾아내는 것
+- 내부 조인을 사용하면 두 시퀀스의 개체 중 특정한 매치 조건을 충족하는 경우 하나의 시퀀스를 형성하게 됨
+
+- join 연산자는 개체에서 추출된 매치키를 바탕으로 두 시퀀스의 내부 조인을 수행함
+- 시퀀스는 각각의 책에 대한 개체를 가지고 있음
+- 예제 데이터에서 하나의 출판사는 어떤 책과도 연관 없음
+- 이런 출팥사는 관심대상에서 제외됨
+- 이런 join 연산 = 내부 조인
+- 시퀀스에서 가져온 개체 중 최소한 하나의 맞는 개체가 다른 시퀀스내에 있으면 유지됨
+- 어떻게 왼쪽 외부 조인과 상관 있는지 알아볼 것
+[join 절을 이용하여 책을 출판사별로 그룹화하기]
+```C#
+from publisher in SampleData.Publishers
+join book in SampleData.Books on publisher equals book.Publisher
+select new { Publisher=publisher.Name, Book = book.Title };
+```
+- 이 질의를 join 질의 연산자를 이요앟여 어떻게 작성할 수 있는가?
+[Join 연산자를 사용하여 출판사별로 책 그룹화하기]
+```C#
+SampleData.Publishers
+.Join(SampleData.Books,  //니부 시퀀스
+publishers => publisher, //외부키 선택자
+book => book.Publisher,  //내부키 선택자
+(publisher, book) => new {Publisher=publisher.Name,  //결과 선택지
+                          Book=book.Title});
+```
+- SQL과 유사한 문법을 바탕으로 질의 표현식은 몇몇 질의 연산자의 복잡함을 피할 수 있도록 해줌
+#### 왼쪽 외부 조인(left outer join)
+- 내부 조인을 사용하면 두 조인된 시퀀스에 모두 포함된 개체들만 살아남음
+- 만약 외부 시퀀스의 모든 개체들을 내부 시퀀스에 맞는 개체가 있는지 유무에 관계없티 유지하고 싶으면 왼쪽 외부 조인을 이용해야 함
+
+- 내부 조인과 유사하지만 모든 좌변의 개체들이 우변에 맞는 값이 없더라도 최소한 한 번 이상 포함된다
+- 책이 없는 출판하들을 결과에 포함시키고 싶을 떄도 사용됨
+[왼쪽 외부 조인을 하기 위해 사용된 질의]
+```C#
+from publisher in SampleData.Publishers
+join book in SampleData.Books
+  on publisher equals book.Publisher into publisherBooks
+from book in publisherBooks.DefaultIfEmpty()
+select new {
+    Publisher = publisher.Name, 
+    Book = book == default(Book) ?"(no books)": book.Title
+};
+```
+- DefaultIfEmpty 연산자는 빈 시퀀스를 위해 기본 개체를 제공함
+- DefaultIfEmpty는 제네릭 형태의 default 키워드를 사용함
+- 이는 참조형을 위해 null을 반환하고 수치값을 위해 0을 반환함
+- 구조체에 대해서는 각각의 멤버가 값인지 참조인지 여부에 따라 0과 null로 초기화된 인스턴스를 반환함
+
+- 예제의 경우에 기본값은 null임 그러나 여기서는 book이라는 특성에 맞춰서 잘 했음
+
+#### 카테시안 조인(cross join)
+- 두 시퀀스의 모든 개체들의 카테시안 곱을 계산함
+- 결과: 첫 번째 시퀀스의 각각의 개체와 두 번째 시퀀스들의 개체들의 곱으 ㅣ시퀀스가 됨
+- -> 결과 시퀀스의 개체수 = 각각의 시퀀스의 개체수 
+
+- **LINQ에서 카테시안 조인은 Join 연산자에 의해 이루어지지 않음**
+- LINQ에서는 카테시안 조인을 사영이라고 함
+- SelectMany 연산자를 이용하거나 from 절을 질의 표현식에서 수정하는 방법으로 가능함
+[카테시안 조인을 수행하는 질의]
+```C#
+from publisher in SampleData.Publishers
+from book in SampleData.Books
+select new {
+    Correct = (publisher == book.Publisher),
+    Publisher = publisher.Name,
+    Book = book.Title
+};
+```
+- 동일한 작업을 질의 표현식을 사용하지 않고 selectMany와 Select 연산자를 이용해서 알 수 있는지 보여줌
+```C#
+SampleData.Publishers.SelectMany(
+    publisher => SampleData.Books.Select(
+        book => new {
+            Correct = (publisher == book.Publisher),
+            Publisher = publisher.Name,
+            Book = book.Title}));
+```
 ### 4.5.5 분할
+#### Skip과 Take
+- 시퀀스에서 반환된 데이터의 일부 범위를 가져오고 싶다면, Skip과 Take라는 두 가지의 분할 질의 연산자를 사용 가능함
+- Skip 연산자는 주어진 개수만큼 시퀀스에서 개체를 건너뛴 다음 나머지 부분을 반환함
+- Take 연산자는 지정된 위치에서 주어진 개수만큼의 개체를 반환하고 나머지를 버림
+- 따라서 한 페이지의 크기인 pageSize가 주어졌을 때 페이지 번호인 n을 반환하는 일반적인 표현식은 이렇다
+```C#
+Sequence.Skip(n*pageSize).Take(pageSize).
+```
