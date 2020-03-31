@@ -250,17 +250,132 @@ static void Main()
     - 계량화(quantifiers)
     - 누적연산(aggregation)
 
-- 질의 연산자들이 System.Linq.Enumerable을 통해 IEnumerable<T>를 구현하는 형태의 확장 메소드라는 것에 주목하자
+- 질의 연산자들이 System.Linq.Enumerable을 통해 IEnumerable<T>를 구현하는 형태의 확장 메소드라는 것에 주목!
 
-## 4.3 LINQ를 ASP.NET과 Windows Forms와 함께 바인딩하기
-### 4.3.1 웹 어플리케이션에서의 데이터 바인딩
-### 4.3.2 Windows Forms 애플리케이션을 위한 데이터 바인딩
+- 이런 연산자들은 표준 질의 연산자라고 불림
+- 스스로 직접 정의한 질의 연산자들을 제공 가능함
+- 이는 표준 질의 연산자들에 의해 지원하지는 않음
+- LINQ를 설계한 사람들이 범용 연산들을 처리가능하도록 함 
 
 ## 4.4 주요 표준 질의 연산자에 대하여 알아보기
+- 표준 질의 연산자: 질의를 구성하는 기본 구성단위
+
+  [종류별로 정리된 표준 질의 연산자]
+
+  | 종류               | 질의 연산자                                                  |
+  | ------------------ | :----------------------------------------------------------- |
+  | 선별(필터링, 추출) | OfType, **Where**                                            |
+  | 사영               | **Select, SelectMany**                                       |
+  | 분할               | **Skip**, SkipWhile, **Take**, TakeWhile                     |
+  | 조인               | **GroupJoin, Join**                                          |
+  | 병합               | Concat                                                       |
+  | 순차정렬           | **OrderBy, OrderByDescending**, Reverse, **ThenBy**, **ThenByDescending** |
+  | 그룹화             | **GroupBy**, ToLookup                                        |
+  | 집합연산           | **Distinct**, Except, Intersect, Union                       |
+  | 변환               | AsEnumerable, AsQueryable, Cast, **ToArray**, **ToDictionary, ToList** |
+  | 등치성             | SequenceEqual                                                |
+  | 개체 선택          | ElementAt, ElementAtOrDefault, First, FirstOrDefault, Last, LastOrDefault, SIngle, SingleOrDefault |
+  | 생성               | **DefaultIfEmpty,** Empty, Rangle, Repeat                    |
+  | 계량화             | All, Any, Contains                                           |
+  | 누적연산           | Aggregate, Average, **Count**, LongCount, **Max, Min, Sum**  |
+
 ### 4.4.1 제한 연산자 "Where"
+- 체와 같이 Where 연산자는 특정한 분류기준을 통해 값의 시퀀스를 필터링해냄
+- Where는 원본 시퀀스를 열거하여 미리 지정한 조건을 만족시키는 값들만 남기게 됨
+
+[Where 사용 예시]
+```C#
+public static IEnumerable<T> Where<T>(
+    this IEnumerable<T> source,
+    Func<T,bool> predicate);
+```
+- 조건함수의 첫 번 째 매개변수 = 심사할 개체
+- 이 함수는 조건의 만족 여부를 나타내는 Boolean 값을 리턴함
+
+[가격이 155이상인 책들의 목록 생성하는 예시]
+```C#
+IEnumerable<Book> books = 
+    SampleData.Books.Where(book => book.Price >= 15);
+```
+- 질의 표현식 내에서, where 절은 Where 연산자에 대한 호출로 변환됨
+- 아래 예시는 이전 예시와 같은 결과물을 냄
+```C#
+var books =
+    from book in SampleData.Books
+    where book.Price >= 15
+    select book;
+```
+- 다음은 원본 시퀀스에 대해 개체의 인덱스로 동작 가능학 하는 Where 연산자의 재정의 형태
+```C#
+public static IEnumerable<T> Where<T>(
+    this IEnumerable<T> source,
+    Func<T, int, bool> predicate);
+```
+- 조건 함수의 두 번째 매개변수가 만약 존재한다면, 이것은 원본 시퀀스에서 개체의 순서를 나타내는 인덱스 번호임
+
+[책의 컬렉션에서 가격이 15이상이고, 홀수 번째인 경우만 선별해내는 예시]
+```C#
+IEnumerable<Book> books =
+    SampleData.Books.Where(
+        (book, index) => (book.Price >= 15) && ((index&1) == 1));
+```
+- Where는 제한을 가하는 연산자로, 간단하기 때문에 시퀀스 내의 개체들을 필터링하기 위해 자주 사용할 것임
+
 ### 4.4.2 사영 연산자 이용하기
+#### Select
+- Select 연산자는 연산자에 넘겨진 매개변수를 바탕으로 시퀀스에 대하여 사영을 수행하기 위해 이용됨
+- Select는 다음과 같이 선언됨
+```C#
+public static IEnumerable<S> Select<T, S>(
+    this IEnumerable<T> source,
+    Func<T, S> selector);
+```
+- Select 연산자는 각각의 대상 객체에 대해 selection 함수를 적용하고 난 후의 결과를 담은 열거형을 할당하고 반환함
+[모든 책의 제목을 담은 시퀀스]
+```c#
+IEnumerbale<String> titles = 
+    SampleData.Books.Select(book => book.Title);
+```
+- 질의 표현식 내에서 Select절은 Select에 대한 호출로 변환됨
+- 다음의 질의 표현식은 전의 예로 변환이 됨
+```C#
+var titles = 
+    from book in SampleData.Books
+    select book.Title;
+```
+- 이 질의는 전에 반환되어썯ㄴ "책"이라는 객체의 시퀀스를 문자열값의 시퀀스로 범위를 축소해줌
+- 객체를 반환받을 수도 있고 개체를 선택 가능함
+- 다음은 책과 연관된 Publisher 객체를 어떻게 반환받는지 보여줌
+```C#
+var publishers = 
+    from book in SampleData.Books
+    select book.Publisher;
+```
+- Select를 사용했을 때 반환되는 컬렉션은 새로운 객체의 항목들의 조합이거나 원본 객체를 그대로 보존한 형태일 수도 있음
+- 다음은 익명형이 이용되어 필요한 항목들을 즉석에서 객체화하여 결과를 반환해주고 있음
+```C#
+var books =
+    from book in SampleData.Books
+    select new {book.Title, book.Publisher.Name, book.Authors};
+```
+- 이러한 종류의 코드는 데이터를 사영해줌
+#### SelectMany
+- 사영 계열의 두 번쨰 연산자
+- 이 연산자의 선언은 Select의 선언과 매우 유사함
+- 그러나 이 연산자의 내부 함수는 시퀀스를 반환한다는 차이가 있음
+```C#
+public static IEnumerable<S> SelectMany<T, S>(
+    this IEnumerable<T> Source,
+    Func<T, IEnumerable<S>> selector);
+```
+
+
+#### 인덱스를 선택하기
+
 ### 4.4.3 Distinct 이용하기
+
 ### 4.4.4 변환 연산자 이용하기
+
 ### 4.4.5 누적 연산자 이용하기
 
 ## 4.5 메모리 내의 객체 그래프에 대한 뷰 작성하기
