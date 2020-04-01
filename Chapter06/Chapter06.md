@@ -272,7 +272,38 @@ FROM [Book] AS [t0]
 
 - 질의의 결과물이 필요한 시점 이전에 앞서 질의를 수행하지 않음 
 - -> 수행되기 전에 질의에 추가적 조건이나 기능을 더해나갈 수 있음
+- 다음 예제에서 Skip과 Take라는 구문을 이용하여 페이지 기능 구현 가능 
+- LINQ to SQL이 그 부가적인 질의 옵션들과 초기 질의문을 잘 조합하여 최적화된 SQL 질의문을 생성해줌<br>
 
+[조합을 이용하여 데이터를 페이지화하기]
+```C#
+DataContext dataContext = new DataContext(liaConnectionString);
+dataContext.Log = Console.Out;
+
+var books= dataContext.GetTable<Book>();
+
+var query = from book in books
+            select new
+            {
+                book.Title,
+                book.Price
+            };
+var pagedTitles = query.Skip(2);
+var titlesToShow = PagedTitles.Take(2);
+
+ObjectDumper.Write(titlesToShow);
+```
+[자동 생성된 SQL]
+```sql
+SELECT      [t1].[Title], [t1].[Price]
+FROM        (SELECT     ROW_NUMBER()
+                        OVER (ORDER BY [t0].[Title], [t0].[Price])
+                        AS [ROW_NUMBER], [t0].[Title], [t0].[Price]
+             FROM       [dbo].[Book] AS [t0]) AS [t1])
+WHERE       [t1].[ROW_NUMBER] BETWEEN @p0 +1
+            AND @p0 + @p1
+ORDER BY    [t1].[ROW_NUMBER]
+```
 ## 6.3 질의 다듬기
 
 ## 6.4 객체 트리를 다루기
