@@ -156,7 +156,6 @@ using System.Data.Linq.Mapping;
 
 public class Book
 {
-
     [Column(Name = "ID", IsPrimaryKey = true)]
     public Guid BookId { get; set; }
     [Column]
@@ -198,8 +197,84 @@ public class Book
 - DataContext가 그 정보를 근거로 DB에 대한 연결을 열고 닫는 역할을 전부 맡아 처리해줌
 - 결과적으로 불필요하게 매우 성가시고 성능상의 문제를 야기시킬 수 있는 연결 관련 정보를 매번 처리하지 않아도 됨
 
+- DataContext를 이용하여 작업을 시작하기에 앞서, 데이터베이스에 관한 연결 문자열을 바탕으로 새로운 DataContext 객체의 인스턴스를 생성해야 함
+`DataContext dataContext = new DataContext(liaConnectionString);`
+
+- DataContext는 매핑 관련 일도 담당, 데이터베이스에서 추출한 정보를 메머리 객체로 옮겨 담는 중요한 역할도 담당함
+- DataContext는 데이터를 이런 일을 위해 특화된 Table<> 형태의 기본 컬렉션 객체로 넘겨줌
+- DataContext 객체에서 책들의 정보가 담긴 테이블을 가져오기 위해 dataContext.GetTable<Book>; 을 호출하면 됨
+```C#
+DataContext dataContext = new DataContext(liaConnectionString);
+Table<Book> books = dataContext.GetTable<Book>();
+```
+- LINQ to SQL 없이 객체들의 집합을 반환하기 위해 보통 List<Book> 같은 형태의 List<>형을 이용함
+- 그러나 LINQ to SQL을 이용할 경우, Table<Book>이라는 새로운 형태로 반환하게 됨
+- 이런 변화를 통해 단순히 원시적 데이터 형태가 아닌 좀 더 다루고 접근하기 용이한 데이터 형태를 이용할 수 있다는 장점을 얻을 수 있음
+- 이 변화는 DB에 실제로 데이터에 대한 요청을 하기 전에 질의문을 수정할 수 있도록 해줌
+
 ## 6.2 LINQ to SQL을 이용하여 데이터 받아오기
+- DB에서 값들을 선택하는 과정!을 처음 알아볼 것
+- GetTable을 통해 데이터에 접근하는 방법을 한 가지 알아봄
+- 일반적인 Table 클래스는 IEnumerable<T>의 새로운 확장형인 IQueryable<T> 인터페이스를 구현하고 있음
+- IEnumerable<T>를 확장하여 구현하고 있으므로 LINQ to Objects에서 이용했던 표준 질의 연산자들을 그대로 사용 가능함
+- DB에서 추출한 새로운 형태의 Book 객체에서 모든 책들의 데이터를 받아오는 간단한 질의를 살펴볼 것!<br>
+[LINQ to SQL을 이용하여 책 데이터를 받아오기]
+```C#
+DataContext dataContext = new DataContext(liaConnectionString);
+IQueryable<Book> query = from book in dataContext.GetTable<Book>()
+                         select book;
+```
+- 데이터베이스에 실제로 보낸 질의문을 살펴보는 방법에는 여러 가지가 있음
+- SQL Server와 함께 배포되는 SQL Server Profiler를 통해 DB에 어떤 질의 명령들이 주어지는지를 쉽게 볼 수 있음
+- 이런 방법이 아니어도 DataContext의 Log 프로퍼티를 출력 스트림에 연결하는 방법도 있음
+[Console이라는 출력 스트림에 연결된 경우]
+`dataContext.Log = Console.Out;`
+    - 이런 형태로 로깅 기능이 설정되면 DB에 전달되는 모든 SQL 명령문들은 출력 스트림으로 전달되어 사용자가 확인할 수 있게 됨
+- 또 다른 대안으로는 코드 내에서 DataContext 객체의 GetCommand 메소드를 통해 질의문에 접근하는 방법이 있음
+`Console.WriteLine(dataContext.GetCommand(query).CommandText);`
+    - 이 명령은 곧 전달될 질의를 보여줄 것
+
+- LINQ to SQL은 표준적인 LINQ 질의 표현을 기반으로 하고 있음 -> 필요로 하는 컬럼들로 데이터 전달의 대상을 제한시킬 수 있음
+- 책 주제에 관한 정보만 필요로 한다면 다음처럼 select 구문을 수정하는 방법이 있음<br>
+[책 주제의 목록을 받아오기]
+```C#
+DataContext dataContext = new DataContext(liaConnectionString);
+dataContext.Log = Console.Out;
+IEnumerable<String> query = 
+    from book in dataContext.GetTable<Book>
+    select book.Title;
+```
+- dataContext.Log를 이용했으므로 출력창에서 다음처럼 자동 생성된 SQL 질의문 확인 가능
+```sql
+SELECT [t0].[Title]
+FROM [Book] AS [t0]
+```
+- 그런데 책의 주제와 가격만 알고 싶음..!
+- 임시 구조체를 변경해야 함!
+[익명형으로 데이터를 사영하기]
+```C#
+var query = from book in dataContext.GetTable<Book>()
+            select new
+            {
+                book.Title,
+                book.Price
+            };
+```
+[자동 생성된 질의문]
+```sql
+SELECT [t0].[Title], [t0].[Price]
+FROM [Book] AS [t0]
+```
+
+- 실제로 SQL 질의문은 데이터에 처음 접근하는 순간에 수행됨
+- query 변수는 원하는 데이터 접근방법에 대한 정보를 갖고 있고 데이터 자체는 포함하고 있지 않음
+- 질의문의 수행은 처음 그 데이터가 사용될 떄까지 연기됨
+
+- 질의의 결과물이 필요한 시점 이전에 앞서 질의를 수행하지 않음 
+- -> 수행되기 전에 질의에 추가적 조건이나 기능을 더해나갈 수 있음
+
 ## 6.3 질의 다듬기
+
 ## 6.4 객체 트리를 다루기
 ## 6.5 내 데이터는 어느 시점에 로딩되는가? 그리고 그것이 왜 중요할까?
 ## 6.6 데이터를 업데이트하기
