@@ -733,6 +733,13 @@ FROM    [Subject] AS [t0]
 LEFT OUTER JOIN [dbo].[Book] AS [t1] ON [t1].[Subject] = [t0].[ID]
 ORDER BY [t0].[ID], [t1].[ID]
 ```
+- 접근하고 싶은 데이터의 DataLoadOptions를 명시하는 방법 -> 지연된 수행방식에 있던 다수의 서브쿼리를 피하게 됨
+- 클라이언트 애플리케이션과 DB 사이의 소통을 훨씬 개선시켜 줌
+- 로딩 옵션은 특정 DataContext의 인ㅅ턴스에서 한 번만 설정 가능함(주의!!)
+- 섲렁 이후에는 해당 인스턴스에 대해서 변경 불가능
+
+- 단순히 DataLoadOptions를 지정해주는 것 -> 결과에 반복문을 두 번 수행 시 발생하는 중복된 데이터 전송 방지 불가능
+- 최적화를 마치기 위해 DataLoadOptions를 ToList와 복합적으로 사용해야 함
 
 ## 6.6 데이터를 업데이트하기
 
