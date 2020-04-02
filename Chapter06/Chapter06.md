@@ -54,6 +54,7 @@ ORDER BY    t0.Description, t1.Title
 - 그 과정은 주제를 질의하는 과정, 가격 조건을 ㅗ 걸러진 책의 목록을 질의 하는 과정 주제와 책을 조합하는 과정 등 몇 개의 분리된 과정으로 세분화 가능
 
 [가격이 30달러 이하인 책들의 주제와 가격을 받아오기]
+
 ```C#
 IEnumerable<Book> books = Book.GetBooks();
 var query = from book in books
@@ -423,10 +424,119 @@ ORDER BY [t1].[SubjectId];
 ```
 - 이 질의는 키값만 반환함
 - 결과 속을 순환할 떄마다 각각의 그룹에 대해 개별 질의가 수행됨
+- 결과가 되는 컬렉션은 groupedBooks 객체에 포함되어 있음
+- 결과를 그룹화했을 떄, 그 그룹에 대해 몇 가지 누적연산을 수행 가능하면 개수 평균값, 총합계 등을 간편하게 확인 가능함.
 
 ### 6.3.3 누적 연산
-### 6.3.4 조인하기
+- LINQ to SQL은 IEnumerable<T>를 확장하는 모든 표준 누적연산 메소드들을 지원함
+- 각각의 분류에 해당하는 책의 개수를 보여주는 질의도 쉽게 작성 가능함<br>
+[결과에 누적연산을 포함시키기]
+```C#
+Table<Book> books = dataContext.GetTable<Book>();
+var query = from book in books
+            group book by book.SubjectId into groupedBooks
+            select new
+            {
+                groupedBooks.Key,
+                BookCount = groupedBooks.Count()
+            };
+```
 
+- select 절에 익명형 이용 -> 그룹화된 책 컬렉션을 가져와서 주제별로 책의 개수를 반환함
+- 결과 집합 속을 순환하면서 모든 책들을 반환한 뒤 클라이언트에서 개수를 세는 방법을 이용한다고 생각하면 매우 비효율적일 수 있음
+- LINQ to SQL은 좀 더 진보된 방식으로 서버에서 개수 센 다음, 필요한 정보만을 반환하여 네트워크상의 불필요한 부하를 줄여줌<br>
+[생성된 SQL문]
+```sql
+SELECT      COUNT(*) AS [BookCount], [t0].[Subject] AS [SubjectId]
+FROM        [Book] AS [t0]
+GROUP BY    [t0].[Subject]
+```
+
+[여러 개의 누적연산을 함께 사용하기]
+```C#
+Table<Book> books = dataContext.GetTable<Book>();
+var query =
+    from book in books
+    group book by book.SubjectId into groupedBooks
+    select new
+    {
+        groupedBooks.Key,
+        TotalPrice = groupedBooks.Sum(b => b.Price),
+        LowPrice = groupedBooks.Min(b => b.Price),
+        HighPrice = groupedBooks.Max(b => b.Price),
+        AveragePrice = groupedBooks.Average(b => b.Price)
+    };
+```
+- 누적 메소드들은 적절한 SQL로 변환되고 누적연산은 데이터베이스 내에서 수행됨
+- 그 다음, DB는 필요로 하는 데이터만 반환해줌 -> 반환해야 할 데이터의 양을 최소화함
+- 기본적으로 LINQ to SQL은 결과를 조인하는 몇 가지 방법을 제공해줌
+
+### 6.3.4 조인하기
+- 여러 테이블의 데이터를 조합해 사용하는 것은 관계형 DB의 정신이자 핵심임
+- LINQ to SQL은 연관이 있는 데이터 집합끼리 조인할 수 있는 몇 가지 방법을 제공해줌
+- 이런 방법으로 단순히 외래키 외에 주제의 이름도 출력 가능함
+
+- LINQ to SQL은 조인을 위한 두 가지 문법을 지원함
+- 1. Where절에서의 비교 연산자를 이용한 문법
+    - ANSI-82 SQL 표준문법에서 권장하는 방법과 동일함
+    - 이 문법을 이용하기 위해 Book과 Subject 테이블 객체에 대한 참조를 가져올 수 있음
+    - 테이블 객체를 참고하면 어떻게 동일한 SubjectId를 공유하는 Subject 객체와 Book 객체에서 데이터를 조인하여 가져오는 질의 표현식을 작성할 수 있는지 알 수 있음<br>
+      [Books와 Subjects를 조인하기]
+    ```C#
+    var subjects = dataContext.GetTable<Subject>();
+    var books = dataContext.GetTable<Book>();
+    var query = from subject in subjects
+                from book in books
+                where subject.SubjectId = book.SubjectId
+                select new { subject.Name, book.Title, book.Price}
+    ```
+- 2. Join 문법 지원
+    ```C#
+    var query = from subject in subjects join book in books
+            on subject.SubjectId equals Book.subjectId
+            select new { subject.Name, book.Title, book.Price};
+    ```
+- **LINQ의 join절에서는 원본과 대상 객체의 순서가 매우 중요함**
+- DB에서 사용되는 SQL과는 달리 LINQ 문법은 매우 엄격하며 관대함을 기대하기 어려움
+    - 질의 표현식들은 메소드로 변환됨 -> 테이블의 순서를 변경하면서 항목의 순서를 변경하지 않는 경우 컴파일 에러를 발생시킬 수 있음<br>
+[System.Linq.Enumerable.Join 확장 메소드의 정의]
+```C#
+public static IEnumerable<TResult> Join<TOuter, TInner TKey, TResult>
+    (this IEnumerable<TOuter> outer, IEnumerable<TInner> inner,
+    Func<TOuter, TKey> outerKeySelector,
+    Func<TOuter, TKey> innerKeySelector,
+    Func<TOuter, TInner, TResult> resultSelector)
+```
+- 주목할 점: 
+    - **첫 번째와 세 번째 매개변수가 관련 있음**
+    - **두 번째와 네 번째 매개변수가 관련 있음**
+- ![](pic2.PNG)
+- 질의 내의 Join 연산자가 확장 메소드의 매개변수들에 어떻게 매핑되는지를 보여줌
+- 만약 outer와 inner 매개변수, 또는 innerKeySelect와 outerKeySelector의 순서를 ㅏㅈㄹ못 지정해주면 실제 확장 메소드로의 변환이 이루어질 때 예상치 못한 결과를 맞을 수 있음
+
+- 지금까지는 양쪽 테이블에서 일치하는 값을 가진 겨웅에만 반환하는 카테시안조인(=내부 조인)이 주로 설명됨
+- 그러나 종종 한쪽 테이블에 있는 정보를 다른 테이블에 일치하는 정보가 없는 경우에도 출력하고플 때가 있음
+- 이런 상황을 SQL 용어에서는 **외부 조인(outer join)**이라고 함
+```sql
+SELECT      Subject.Name, Book.Title
+FROM        Subject LEFT OUTER JOIN
+                Book ON Subject.ID = Book.Subject
+```
+- 이런 기능을 하는 LINQ 질의를 작성하려면 주제가 존재하거나 null인 책들을 차족 있다는 것을 알아야 함!
+- DefaultIfEmpty() 확장 메소드는 이런 상황에서 큰 도움이 될 수 있음
+```C#
+var query =
+    from subject in Subjects
+    join book in books
+        on subject.SubjectId equals book.SubjectId into joinedBooks
+    from joinedBook in joinedBooks.DefaultIfEmpty()
+    select new
+    {
+        subject.Name,
+        joinedBook.Title,
+        joinedBook.Price
+    };
+```     
 ## 6.4 객체 트리를 다루기
 
 ## 6.5 내 데이터는 어느 시점에 로딩되는가? 그리고 그것이 왜 중요할까?
