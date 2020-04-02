@@ -690,7 +690,49 @@ ObjectDumper.Write(subject);
 - 단순히 책 주제의 목록만 필요로 한다면 책의 정보 전체를 받아오지 않음
 - 필요로 하는 책들만 필요 시점에 가져옴 -> 네트워크 사용량을 최소화, 메모리 사용량 최소화, DB가 할 작업량을 줄이는 일석 삼조!
 
+- 각각의 주제에 대해 자식 레코드는 필요로 할 떄에만 전달된다는 것을 확인!
+- 이런 형태의 지연된 수행은 사용자가 원하는 것만 보여주려고 한다면 매우 효과적인 선택
+- 각각의 주제에 대하여 책 가져올 떄 별개의 질의를 데이터베이스에 보내어 Subject 테이블의 각각의 행들을 가져올 것임
+
+- 생성된 코드에서 주제의 목록을 보내줌 
+- 각각의 항목들에 대해 순환을 수행할 시 각각의 책에 대해 주제의 id열을 넘겨주는 별개의 질의들을 수행함
+- 하나의 명령문을 보내는 게 아님! 각각의 자식 레코드에 대한 명령문을 보냄!
+- 만약 ObjectDumper.Write을 한번 더 호출하면... 무시무시한 결과를 볼 수 있음....
+- 지연된 로딩 -> 네트워크 부하가 심해짐..!
+- 어떻게 개선할 수 있을까?
+
 ### 6.5.2 즉시 세부정보를 로딩하기
+- 만약 목적이 결과를 한 번 이상 받아오는 것이라면, 선제적으로 예측하여 결과를 받은 후, ToList, ToDictionary, ToLookup, ToArray 확장 메소드 등을 이용하여 배열이나 리스트와 같은 컬렉션 객체에 임시로 저장해둘 수 있음
+- 방금 작성했던 코드를 수정해서 subjects를 받아오고 이 임시로 저장한 값을 계속 활용할 것임
+`var subjects = dataContext.GetTable<Subject>().ToList<Subject>();`
+- 즉시 결과를 받아오고 싶다고 명시함 -> LINQ to SQL이 즉시 결과를 받아와서 새로운 제네릭 List를 받아온 데이터를 기반으로 생성하도록 강제 가능
+- 데이터를 필요로 할 때마다 DB에 접근하여 DB와 네트워크를 피곤하게 하는 경우 방지 가능함
+- LINQ to Objects 질의 매커니즘을 이용하여 결과조작이나 연산을 수행 가능하지만.... LINQ to SQL이 가진 몇 가지 장점이 사라짐
+    - 특히 서버측 기능을 이용하여 메모리에 저장하는 데이터의 양을 최적화하는 기능을 잃게되는 것은 마음이 좀 아픔...
+- 다행히 LINQ to SQL은 dataContext에게 어떤 최적화를 시도할지에 대해 명령 내릴 수 있음
+- 다음 코드에서 볼 수 있는 DataLoadOption형을 이용하면 미리 결과 집합의 모양을 준비할 수 있음
+- 실제로 선언된 객체형의 레코드를 받아오는 순간 연관된 자식 객체들도 받아오는 형태로 구성 가능함<br>
+[DataLoadOptions를 이용하여 객체 로딩을 최적화하기]
+```C#
+DataLoadOptions options = new DataLoadOptions();
+options.LoadWidth<Subject>(subject => subject.Books);
+dataContext.LoadOptions = options;
+```
+[LINQ에서 자동으로 생성해준 SQL]
+```sql
+SELECT  [t0].[ID], [t0].[Description], [t0].[Name],
+        [t1].[ID] AS [BookID], [t1].[Isbn], [t1].[Notes], [t1].[PageCount],
+        [t1].[Price], [t1].[PubDate] AS [PublicationDate], [t1].[Summary],
+        [t1].[Title], [t1].[Subject] AS [SubjectId],
+        [t1].[Publisher] AS [PublisherId], (
+            SELECT COUNT(*)
+            FROM [dbo].[Book] AS [t2]
+            WHERE [t2].[Subject] = [t0].[ID]
+            ) AS [count]
+FROM    [Subject] AS [t0]
+LEFT OUTER JOIN [dbo].[Book] AS [t1] ON [t1].[Subject] = [t0].[ID]
+ORDER BY [t0].[ID], [t1].[ID]
+```
 
 ## 6.6 데이터를 업데이트하기
 
