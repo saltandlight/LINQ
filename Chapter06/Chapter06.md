@@ -510,9 +510,9 @@ public static IEnumerable<TResult> Join<TOuter, TInner TKey, TResult>
 - 주목할 점: 
     - **첫 번째와 세 번째 매개변수가 관련 있음**
     - **두 번째와 네 번째 매개변수가 관련 있음**
-- ![](pic2.PNG)
+![](pic2.PNG)
 - 질의 내의 Join 연산자가 확장 메소드의 매개변수들에 어떻게 매핑되는지를 보여줌
-- 만약 outer와 inner 매개변수, 또는 innerKeySelect와 outerKeySelector의 순서를 ㅏㅈㄹ못 지정해주면 실제 확장 메소드로의 변환이 이루어질 때 예상치 못한 결과를 맞을 수 있음
+- 만약 outer와 inner 매개변수, 또는 innerKeySelect와 outerKeySelector의 순서를 잘못 지정해주면 실제 확장 메소드로의 변환이 이루어질 때 예상치 못한 결과를 맞을 수 있음
 
 - 지금까지는 양쪽 테이블에서 일치하는 값을 가진 겨웅에만 반환하는 카테시안조인(=내부 조인)이 주로 설명됨
 - 그러나 종종 한쪽 테이블에 있는 정보를 다른 테이블에 일치하는 정보가 없는 경우에도 출력하고플 때가 있음
@@ -522,7 +522,7 @@ SELECT      Subject.Name, Book.Title
 FROM        Subject LEFT OUTER JOIN
                 Book ON Subject.ID = Book.Subject
 ```
-- 이런 기능을 하는 LINQ 질의를 작성하려면 주제가 존재하거나 null인 책들을 차족 있다는 것을 알아야 함!
+- 이런 기능을 하는 LINQ 질의를 작성하려면 주제가 존재하거나 null인 책들을 찾고 있다는 것을 알아야 함!
 - DefaultIfEmpty() 확장 메소드는 이런 상황에서 큰 도움이 될 수 있음
 ```C#
 var query =
@@ -537,6 +537,41 @@ var query =
         joinedBook.Price
     };
 ```     
+- 이런 경우, joinedBooks라는 새로운 임시 객체에 책과 주제를 조인한 결과를 저장해야 함
+- 그리고 Subjects와 조인된 Books에서 결과를 나타내기 위해 DefaultIfEmpty 확장 메소드를 이용하여 책을 갖지 않는 주제도 나타내야 함
+- 책과 주제의 정보를 조합 가능해짐
+[원래의 예제를 LINQ to SQL을 이용하여 다시 작성하기]
+```C#
+DataContext dataContext = new DataContext(liaConnectionString);
+
+Table<Subject> subjects = dataContext.GetTable<Subject>();
+Table<Book> books = dataContext.GetTable<Book>();
+
+var query = from subject in subjects
+            join book in books
+                on subject.SubjectId equals book.SubjectId
+            where book.Price < 30
+            orderby subject.Name
+            select new
+            {
+                subject.Name,
+                joinedBook.Title,
+                joinedBook.Price
+            };
+```
+
+[생성된 질의]
+```sql
+SELECT      t0.Name, t1.Title, t1.Price
+FROM        Subject AS t0 INNER JOIN
+                       Book AS t1 ON t0.ID = t1.Subject
+WHERE       (t1.Price < @p0)
+ORDER BY    t0.Name
+```
+- 모든 열을 전송하는 것이 아니라, 사용자가 필요로 하는 열만 선별하여 전송하고 있음
+- 서버상에서 조인, 필터링, 정렬 등의 작업이 동작함
+
+- 애플리케이션을 개발할 때, 객체의 계층구조를 그대로 유지하면서 작업하는 것이 더 유리한 경우도 있음
 ## 6.4 객체 트리를 다루기
 
 ## 6.5 내 데이터는 어느 시점에 로딩되는가? 그리고 그것이 왜 중요할까?
