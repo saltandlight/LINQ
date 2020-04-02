@@ -227,12 +227,12 @@ IQueryable<Book> query = from book in dataContext.GetTable<Book>()
 ```
 - 데이터베이스에 실제로 보낸 질의문을 살펴보는 방법에는 여러 가지가 있음
 - SQL Server와 함께 배포되는 SQL Server Profiler를 통해 DB에 어떤 질의 명령들이 주어지는지를 쉽게 볼 수 있음
-- 이런 방법이 아니어도 DataContext의 Log 프로퍼티를 출력 스트림에 연결하는 방법도 있음
-[Console이라는 출력 스트림에 연결된 경우]
+- 이런 방법이 아니어도 DataContext의 Log 프로퍼티를 출력 스트림에 연결하는 방법도 있음<br>
+[Console이라는 출력 스트림에 연결된 경우]<br>
 `dataContext.Log = Console.Out;`
     - 이런 형태로 로깅 기능이 설정되면 DB에 전달되는 모든 SQL 명령문들은 출력 스트림으로 전달되어 사용자가 확인할 수 있게 됨
-- 또 다른 대안으로는 코드 내에서 DataContext 객체의 GetCommand 메소드를 통해 질의문에 접근하는 방법이 있음
-`Console.WriteLine(dataContext.GetCommand(query).CommandText);`
+- 또 다른 대안으로는 코드 내에서 DataContext 객체의 GetCommand 메소드를 통해 질의문에 접근하는 방법이 있음<br>
+`Console.WriteLine(dataContext.GetCommand(query).CommandText);`<br>
     - 이 명령은 곧 전달될 질의를 보여줄 것
 
 - LINQ to SQL은 표준적인 LINQ 질의 표현을 기반으로 하고 있음 -> 필요로 하는 컬럼들로 데이터 전달의 대상을 제한시킬 수 있음
@@ -510,7 +510,7 @@ public static IEnumerable<TResult> Join<TOuter, TInner TKey, TResult>
 - 주목할 점: 
     - **첫 번째와 세 번째 매개변수가 관련 있음**
     - **두 번째와 네 번째 매개변수가 관련 있음**
-![](pic2.PNG)
+- ![](pic2.PNG)
 - 질의 내의 Join 연산자가 확장 메소드의 매개변수들에 어떻게 매핑되는지를 보여줌
 - 만약 outer와 inner 매개변수, 또는 innerKeySelect와 outerKeySelector의 순서를 잘못 지정해주면 실제 확장 메소드로의 변환이 이루어질 때 예상치 못한 결과를 맞을 수 있음
 
@@ -573,8 +573,124 @@ ORDER BY    t0.Name
 
 - 애플리케이션을 개발할 때, 객체의 계층구조를 그대로 유지하면서 작업하는 것이 더 유리한 경우도 있음
 ## 6.4 객체 트리를 다루기
+- 객체/관계 개념 불일치의 핵심: 구별자 가되는 열로 조인된 데이터 행(관계형)과 객체의 컬렉션을 포함하는 메모리 구조(객체지향형)간의 불일치
+- 이런 객체들은 추가적인 컬렉션의 객체를 포함할 수 있음
+- 그래서... 주제를 읽어들이고 나서 그 주제와 연관된 책을 찾아오는 쉬운 방법 없듬...
+- 명시적으로 DB에게 두 테이블을 조인하여 결과를 보여달라고 요청해야 함
+- 다행히도 LINQ to SQL은 객체의 계층구조를 쉽게 탐색할 수 있는 방법을 제공함
 
+- Subject 클래스의 정의로 돌아가맘녀, 특정 주제에 속하는 책들을 불러오는 메소드를 원할 수도 있음
+- 이런 경우는 지연된 로딩을 이용하여 각각의 주제에 연관된 책들을 가져오는 형태로 해결함
+- 그렇게 되면 Books 객체는 Subject 객체의 한 프로퍼티가 되어원하는 대로작업 가능!
+- LINQ to SQL의 매핑기능을 이용한 다음 코드를 살펴보면 어떻게 Book 객체를 제네릭한 System.Data.Linq.EntitySet<Book> 객체로 나타내어 Books라고 이름지을 수 있는 지 알 수 있음
+- 자동구현된 프로퍼티 문법을 이용할 것임
+```C#
+using System.Data.Linq;
+using System.Data.Linq.Mapping;
+
+{
+    [Table]
+    public class Subject
+    {
+        [Column(IsPrimaryKey =true, Name ="ID")]
+        public Guid SubjectId { get; set; }
+        [Column]
+        public String Description { get; set; }
+        [Column]
+        public String Name { get; set; }
+
+        [Association(OtherKey = "SubjectId")]
+        public EntitySet<Book> Books { get; set; }
+    }
+}
+```
+- 테이블이나 컬럼과 마찬가지로 프레임워크에게 객체들이 어떻게 연관되어 있는지 말해줄 필요 있음
+- Associatoin 속성을 통해 이런 일을 처리함
+- Association 속성을 이용하기 위해서는 실제로 Book 형이 어떻게 Subject에 연관되어 있는지를 알아야 함
+
+- 두 객체 간 연관관계는 조인하게 될 객체의 속성을 현재의 객체에 지정해주는 방식으로 설정 가능함
+- Book 객체는 SubjectId라는 프로퍼티를 가짐, 이 프로퍼티는 데이터베이스 내의 Book 테이블 내에 있는 Subject 항목에 이미 매핑되어 있음
+- 그러므로 Subject 클래스에 포함된 Books 프로퍼티에 레코드의 키로 동작하는 SubjectId를 지정해줌
+- 이 키는 OtherKey 또는 연관된 객체의 키 프로퍼티임
+
+- 두 객체 간의 관계를 설정해주었으므로 다음 코드처럼 표준적인 LINQ to SQL 표현식을 통해 Subjects를 전달 가능함
+```C#
+foreach(Subject subject in dataContext.GetTable<Subject>())
+{
+    Console.WriteLine(subject.Name);
+    foreach(Book book in subject.Books)
+    {
+        Console.WriteLine("...{0}", book.Title);
+    }
+}
+```
+- 질의 수행 시, 아무 설정 안 된 상태에서 외부조인과 동일한 결과를 얻게 됨
+- 객체의 관점에서는 주제이 목록을 반환할 때, 주제와 연관된 책들이 존재하는지 여부에 대해 알지 못함
+- 두 번째 foreach 문을 수행할 떄만 연관된 책이 있는지 여부를 판단 가능함
+
+- 지금까지의 결과를 좀더 필터링하려면 Any와 All과 같은 몇 가지 추가적인 화장 메소드를 이용 가능함
+- Any 메소드: 관계된 레코드들이 양쪽 결과집합에 들어있는 경우에만 반환함
+- 연관된 책이 있는 ㅈ제만 반환하기 위해서는 Any 확장 메소드를 사용할 수도 있음
+[Any를 사용하여 객체 트리에 대해 내부 조인을 수행하기]
+```C#
+var query = from subject in Subjects
+            where subject.Books.Any()
+            select subject;
+```
+- 원한다면 정반대의 필터링을 하기 위해 where의 내용에 느낌표 하나를 추가하여 부정이 가능함
+```C#
+var query = from subject in Subjects
+            where !subject.Books.Any()
+            select subject;
+```
+- 만약 가격이 30달러 미만인 책의 주제만을 볼 수 있도록 필터링한다면, 확장 메소드 All을 이용 가능함
+[All을 이용하여 자식 객체를 필터링하기]
+```C#
+var query = from subject in Subjets
+            where subject.Books.All(b=> b.Price < 30)
+            select subject;
+```
+- 데이터를 프로그래밍하기 쉬운 자연스러운 객체의 계층구조로 표현하는 것은 매우 중요함
+- 객체 간의 의존성 확인, 다른 객체들의 집합에 대해 작동하는 것처럼 동작할 수 있도로 할 수 있음
+- 비즈니스 규칙들을 그대로 유지하면서도 내부적인 관계형 구조에 신경 안 써도 된다는 것 말함
+[객체의 계층구조를 이용하여 질의를 수행하기]
+```C#
+Table<Subject> subjects = dataContext.GetTable<Subject>();
+
+var query = from subject in subjects
+            orderby subject.Name
+            select new 
+            {
+                subject.Name,
+                Books = from book in subject.Books
+                        where book.Price < 30
+                        select new {book.Title, book.Price}
+            };
+```
+- 자연스러운 객체의 계층구조를 구현하는 데 그치지 않고, 결과들을 비슷한 집합의 객체 계층 구조로 포괄(캥거루...)
+
+- 관련없을 질의들을 수행하는 경우도 종종 있음. 그렇지만..! 이런 때에도 데이터를 조인하는 것은 중요
+- 비즈니스적 요구사항에 따라 두 가지 옵션이 있음
+- 각각의 상황에 어떤 방식이 가장 적합한지에 관계없이 LINQ to SQL은 요청받은 값만 필요할 떄 반환해줄 것(장점으로 작용)
+- 아주 드물게~ 지연된 로딩이 사용되었을 때에는 DB에 대한 부하가 가중되는 겨우도 있지만 드물다~~~~
+- LINQ to SQL을 사용할 때 성능 하락을 초래할 수 있는 상황을 살펴보자~~ 
 ## 6.5 내 데이터는 어느 시점에 로딩되는가? 그리고 그것이 왜 중요할까?
+### 6.5.1 지연된 로딩
+- 결과를 보여줄 떄 지연된 로딩은 필요 시에만 데이터를 받아오는 혜택을 제공함
+- 대다수 이것은 성능상의 이점을 제공해주지만 예상치 못한 결과를 불러올 수도 있음
+
+- 다음 예제의 경우 DB에 실제 요청이 들어왔을 때, 생성된 SQL 명령들을 콘솔창에 표시해주도록 할 것임
+[자식 객체의 지연된 로딩]
+```C#
+DataContext dataContext = new DataContext(liaConnectionString);
+dataContext.Log = Console.Out;
+var subjects = dataContext.GetTable<Subject>();
+ObjectDumper.Write(subject);
+```
+- 단순히 책 주제의 목록만 필요로 한다면 책의 정보 전체를 받아오지 않음
+- 필요로 하는 책들만 필요 시점에 가져옴 -> 네트워크 사용량을 최소화, 메모리 사용량 최소화, DB가 할 작업량을 줄이는 일석 삼조!
+
+### 6.5.2 즉시 세부정보를 로딩하기
 
 ## 6.6 데이터를 업데이트하기
 
