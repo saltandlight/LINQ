@@ -305,8 +305,132 @@ WHERE       [t1].[ROW_NUMBER] BETWEEN @p0 +1
 ORDER BY    [t1].[ROW_NUMBER]
 ```
 ## 6.3 질의 다듬기
+- 관계형 DB는 연관성을 가진 데이터들을 손쉽게 관리하고 접근할 수 있는 특수한 기능들을 제공함
+- 인덱스 기능과 질의문의 수행순서를 동적으로 조절 -> DB는 인덱스 기능을 활용하지 않는 경우에 비해 월등한 성능을 제공함
+- 서버에서 정질의문을 수행하는 방법 -> 네트워크를 통해 전송되어야 하는 데이터의 양을 상당히 줄일 수 있음
+- **네트워크 사용량을 감소시키는 것**: 데이터 중심의 애플리케이션의 가장 빈번하고 심각한 병목지점(매우 중요)
+
+### 6.3.1 필터링
+- LINQ to SQL은 완벽한 수준의 필터링 기능을 제공함
+[30달러보다 저렴한 책을 선발하는 예제]
+```C#
+var books = dataContext.GetTable<Book>();
+var query = from book in books
+            where book.Price < 30
+            select book;
+```
+[이 코드에 의해 자동으로 생성된 SQL문]
+```sql
+SELECT  [t0].[Title]
+FROM    [dbo].[Book] AS [t0]
+WHERE   [t0].[Price] < @p0
+```
+- LINQ to SQL을 사용하면 필터링 조건을 서버에서 수행되는 질의문의 매개변수로 전달 가능
+- 필요로 하는 레코드들만 전송될 수 있도록 최적화가 가능함.
+- 매개변수화된 질의를 사용할 시의 장점:     
+    - 부가적으로 매개변수화된 질의를 사용하면 몇 가지 고질적인 문제 해결 가능
+        - 인젝션 기능을 통해 데이터베이스 테이블을 날려버린다거나 하는 유형의 위험에서 자유로워짐
+        - 이런 유형의 *인젝션 공격* 의 위험성을 제거하는 방법ㅂ: 프로시저 또는 매개변수화된 질의를 이용하는 방법
+    - SQL Server의 질의 계획 캐시기능을 활용 가능함
+        - SQL Server는 매개변수들만 바뀌는 질의들이 가장 효율적으로 재활용되어 수행되도록 계획하고 보관함
+        - 자주 수행되는 형태의 질의라면 저장된 계획에 따라 수행하는 것이 훨씬 좋은 성능을 발휘할 수 있음
+
+- 몇몇 SQL 필터링 옵션은 .NET 프레임워크에서 사용되는 형과 완전히 호환되지 않는 경우가 있음
+- 이 경우 LINQ는 SQL구문과 가장 유사한 형태의 데이터 처리함수가 호출될 수 있도록 조정함.
+
+- 예시: SQL에서의 LIKE 구문
+    - LIKE는 패턴 매칭기법을 이용하여 레코드를 검색함
+    - .NET 프레임워크에서는 이 대신 String 객체에 대해 StartsWith, EndsWith, Contains라는 유사한 용도의 함수들을 가지고 있음
+    - LINQ to SQL은 이런 .NET 프레임워크의 함수 호출을 SqlMethods.Like 메소드라는 중개자를 통해 LIKE를 이용하여 .NET 프레임워크 상에서 유사한 기능을 구현 가능하도록 해줌
+    - 따라서 "on"이라는 문자열을 포함하는 모든 책들을 검색하기 위해 다음 코드와 같은 LINQ 식을 이용함
+    ```C#
+        var books = dataContext.GetTable<Book>();
+        var query = from book in books
+                    where book.Title.Contains("on")
+                    select book.Title;
+    ```
+    - Contains를 이용한 질의식은 다음의 SQL 표현식으로 자동 변환됨
+    ```C#
+        SELECT  [t0].[Title]
+        FROM    [dbo].[Book] AS [t0]
+        WHERE   [t0].[Title] LIKE @p0
+        -- @p0: Input NVarChar(Size = 4) NOT NULL [%on%]
+    ```
+    - Contains라는 .NET 프레임워크의 메소드가 LIKE와 %라는 와일드카드 문자를 이용한 SQL식으로 변환됨
+    - 그러나 모든 CLR 함수들이 DB식으로 변환될 수 있는 것은 아님. 
+    ```C#
+        var query = 
+            from book in books
+            where books.PublicationDate >= DateTime.Parse("1/1/2007")
+            select books.PublicationDate.Value.ToString("MM/dd/yyyy");
+    ```
+    - 이 예제에서 변환 프로바이더는 DateTime.Parse 메소드를 변환시켜 DB에 따라 날짜 정보를 알맞게 삽입 가능함.
+    - select절 내에서 데이터의 형식을 변환하기 위해 ToSTring 메소드를 사용하는 것은 불가능함.
+- 변환지원은 프로바이더에 매우 의존적
+- 어떤 메소드가 지원되는지 확신이 없다면 사용해보고 동작하는 지 확인하는 게 빠르다
+- 필터가 클라이언트 대신 서버에 적용될 수 있게 하는 것 -> 엄청난 양의 네트워크 대역폭을 절약, 데이터베이스의 인덱스 효과 얻을 수 있게 됨
+
+### 6.3.2 정렬과 그룹화
+DB의 강력한 기능을 제대로 활용하기 위해 BD가 정의한 인덱스를 사용간으해야 함
+- 질의표현식의 orderby와 orderby...descending 은 정렬 표현식을 데이터베이스가 알아들을 수 있게 변환해주는 역할을 함
+```C#
+var books = dateContext.GetTable<Book>();
+var query = from book in books
+            where book.Price < 30
+            orderby book.Title
+            select book.Title;
+```
+[결과로 반환된 질의 문자열]
+```SQL
+SELECT      [t0].[Title]
+FROM        [Book] AS [t0]
+WHERE       [t0].[Price] < @p0
+ORDER BY    [t0].[Price]
+```
+- 목표의 일부분인 클라이언트 대신 DB의 인덱스를 활용하여 정렬하는 기능 완성
+- 결과를 내림차순으로 정럴하려고 했다면 마지막 절에 descending이라고 명시를 해주었을 것
+
+[그룹화와 정렬]
+```C#
+var query = 
+    from book in dataContext.GetTable<Book>()
+    group book by book.SubejctId into groupedBooks
+    orderby groupedBooks.Key
+    select new 
+    {
+        SubjectId = groupedBooks.Key,
+        Books = groupedBooks
+    };
+
+foreach(var groupedBook in query)
+{
+    Console.WriteLine("Subject: {0}", groupedBook.SubjectId);
+    foreach(Book item in groupedBook.Books)
+    {
+        Console.WriteLie("Book: {0}". item.Title);
+    }
+}
+```
+- 반환되는 객체 = 정렬된 컬렉션 형태
+```sql
+SELECT  [t1].[SubjectId] AS [Key]
+FROM (
+    SELECT  [t0].[Subject] AS [SubjectId]
+    FROM    [dbo].[Book] AS [t0]
+    GROUP BY [t0].[Subject]
+    ) AS [t1]
+ORDER BY [t1].[SubjectId];
+```
+- 이 질의는 키값만 반환함
+- 결과 속을 순환할 떄마다 각각의 그룹에 대해 개별 질의가 수행됨
+
+### 6.3.3 누적 연산
+### 6.3.4 조인하기
 
 ## 6.4 객체 트리를 다루기
+
 ## 6.5 내 데이터는 어느 시점에 로딩되는가? 그리고 그것이 왜 중요할까?
+
 ## 6.6 데이터를 업데이트하기
+
 ## 6.7 요약
