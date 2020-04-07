@@ -735,12 +735,86 @@ ORDER BY [t0].[ID], [t1].[ID]
 ```
 - 접근하고 싶은 데이터의 DataLoadOptions를 명시하는 방법 -> 지연된 수행방식에 있던 다수의 서브쿼리를 피하게 됨
 - 클라이언트 애플리케이션과 DB 사이의 소통을 훨씬 개선시켜 줌
-- 로딩 옵션은 특정 DataContext의 인ㅅ턴스에서 한 번만 설정 가능함(주의!!)
+- 로딩 옵션은 특정 DataContext의 인스턴스에서 한 번만 설정 가능함(주의!!)
 - 섲렁 이후에는 해당 인스턴스에 대해서 변경 불가능
 
 - 단순히 DataLoadOptions를 지정해주는 것 -> 결과에 반복문을 두 번 수행 시 발생하는 중복된 데이터 전송 방지 불가능
 - 최적화를 마치기 위해 DataLoadOptions를 ToList와 복합적으로 사용해야 함
+- 두 가지를 함께 사용하면 단 한 번의 데이터베이스 접근으로 주제와 책에 관한 정보가 잘 조인될 것임!
+
+- 조인을 사용하면 LINQ to SQL이 할 수 있는 일의 범위가 크게 확장됨
+- 객체지향적인 개념으로 작업을 하는지, 관계형 소통을 따라 하는지의 여부와 관계없이 한 번 매핑을 정해주면 이후에는 비즈니스 요구사항에만 집중 가능함
+- 조심스럽게 데이터베이스와의 관계를 살펴보며 우리의 최적화 선택들이 예상대로 결과를 보내주고 있는지 판단해야 함
+- 간단한 연산에서 기본 동작은 충분하지만 코드를 수정하고 최적화하는 단계에서 상당한 성능 향상을 이끌어낼 수 있는 경우도 있음
 
 ## 6.6 데이터를 업데이트하기
+- 데이터를 수정하는 것은 데이터를 받아오는 것만큼 간단함
+- 영속적인 DataContext 객체 하나만 가지고 있다면 텓이블 객체의 표준 메소드들을 이용해서 추가, 수정, 삭제 등의 작업 수행 가능
+- DataContext는 변화를 추적하여 기록하고 데이터베이스 업데이트를 하나의 메소드 호출로 다룸
 
-## 6.7 요약
+- 가장 비싼 책들의 가격을 할인해주기 위해 값을 수정하는 예제를 다음 예제에서 살펴보자
+- [값을 수정하고 데이터베이스에 영속적으로 저장하기]
+```C#
+    DataContext dataContext = new DataContext(liaConnectionString);
+    var ExpensiveBooks = 
+        from b in dataContext.GetTable<Book>()
+        where b.Price > 30
+        select b;
+
+    foreach(Book b in ExpensiveBooks)
+    {
+        b.Price = -5;
+    }
+
+    dataContext.SubmitChanges();
+```
+- 업데이트 명령을 내리기 위해 별개의 매핑을 생성할 것에 대해서 걱정할 필요 없음
+- DataContext는 질의를 하기 위해 생성한 메타데이터를 똑같이 이용 -> update 문을 작성함
+```C#
+UPDATE  [Book]
+SET     [Price] = @p8
+WHERE   ([ID] = @p0) AND ([Isbn] = @p1) AND ([Notes] IS NULL) AND
+        ([PageCount] = @p2) AND ([Price] = @p3) AND ([PubDate] = @p4) AND
+        ([Summary] IS NULL) AND ([Title] = @p5) AND ([Subject] = @p6) AND
+        ([Publisher] = @p7)
+```
+- 이 시점에서 중요한 것: DataContext 객체의 변화 관리도구가 DB에서 Price 항목만 수정해도 된다는 것을 관찰함
+- 다른 열이나 레코드를 수정하려고 들지 않음
+- 데이터를 네트워크에 전송한다고 가정했을 때 데이터 양을 줄여줌
+
+- 생성(create)과 삭제(delete)에 대해서 알아볼 것임
+
+- 일반적으로 컬렉션을 가지고 작업할 때 IList의 Add와 Remove 메소드를 이용하여 객체를 더하고 빼는 작업을 함
+- Add와 Remove는 컬렉션들이 즉각 새로운 값을 반영한다는 의미를 가짐
+- 이런 메소드를 다루는 일므은 InsertOnSubmit와 DeleteOnSubmit과 같이 좀 더 정확하게 범위와 시간을 정해줘야 함
+
+- LINQ to SQL에서 새로운 레코드를 삭제하는 작업은 테이블 개겣의 InsertOnSubmit 메소드를 호출하는 데 지나지 않을 정도로 간단함
+- 레코드를 삭제하기 위해서는 단순히 DeleteOnSubmit 메소드를 호출해주면 됨
+- [테이블에서 항목을 추가하고 삭제하기]
+```C#
+DataContext dataContext = new DataContext(liaConnectionString);
+Table<Book> books = dataContext.GetTable<Book>();
+
+Book newBook = new Book();
+newBook.Price = 40;
+newBook.PublicationDate = System.DateTime.Today;
+newBook.Title = "Linq in Action";
+newBook.PublisherId = 
+    new Guid("4ab0856e-51.......");
+newBook.SubjectId =
+    new Guid("a0e2a5d7-88.......");
+
+//책을 추가하고 저장
+books.InsertOnSubmit(newBook);
+
+dataContext.SubmitChanges();
+
+//테이블에서 책을 삭제함
+books.DeleteOnSubmit(newBook);
+
+dataContext.SubmitChanges();
+```
+- 레코드를 추가하는 코드는 단순한 INSERT INTO 문임
+- 레코드를 삭제하는 코드는 간단한 DELETE FROM [Table명] 의 구조보다 조금 더 복잡함
+- 모든 표준 CRUD 연산들을 기초적인 객체 메소드 호출로 해결 가능요
+- DataContext는 모든 변화를 저장하여 관리하며 동적으로 요청된 작업을 처리 가능한 SQL문을 생성해줌
