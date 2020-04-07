@@ -95,6 +95,7 @@
 
 - 이러한 속성들을 이용하면 Author 클래스를 DB 내의 상응하는 테이블과 매핑 가능
 - 모든 EntitySet 컬렉션은 ID라는 이름의 고유한 Guid를 이용할 것임
+  
   - Guid: 전역 고유 식별자, 응용 소프트웨어에서 사용되는 유사 난수
 - Public 속성을 설정하는 메소드를 이용하는 대신 해당 값을 Storage 매개변수를 통해 직접 내부 _ID 항목에 저장하고 싶다고 명시함
 - 명료함을 위해 열의 이름이 ID임을 Name 매개변수를 이용하여 명시함
@@ -129,10 +130,65 @@ public string FirstName{get; set;}
 [Column(Name="WebSite", DbType="VarChar(200)",
 UpdateCheck = UpdateCheck.Never)]
 public string WebSite {get; set;}
+//얘는 null일 수도 있고 아닐 수도 있는 Varchar, 절대 체크하지 않는 열
 ```
+- 이 세 개의 열은 모두 매개변수화된 명령을 포함하여 최종 타임스탬프 열이라는 특수 기능을 통해 업데이트를 확인함
+- SQL Server를 이용하면 매번 레코드가 수정될 때마다 TimeStamp 열의 내용이 바뀌게 됨
+- 이런 기능은 IsDbGenerated 매개변수를 true로 설정하여 동작 가능
+- 이 열의 행이 바뀔 때마다 체크되도록 IsVersion 속성을 설정해주고, 해당 값이 필수라는 것을 CanBeNull = false를 사용하여 명시해야 함
+```C#
+[Column(Name="TimeStamp", DbType="rowversion NOT NULL", 
+  IsDbGenerated = true, IsVersion =true, CanBeNull=false,
+  UpdateCheck=UpdateCheck.Always)]
+public byte[] TimeStamp {get; set;}
+```
+- DB는 각 행이 수정될 때마다 타임스탬프를 저장함 -> 다른 열에 대한 변화에 신경쓸 필요가 없음
+- ID와 타임스탬프의 이전 값을 조합함 -> 작업하는 동안 충돌문제를 야기하지 않을지 확인함
+- 나머지 속성은 동기화 체크에 필요하지 않음 -> 업데이트 시에 값을 확인할 필요가 절대 없다고 자신 있게 설정 가능(UpdateCheck.Never)
+
+- 이런 매핑들이 다 갖춰졌으면, 수정된 Author 클래스에 대해 표준적인 질의를 날려볼 준비가 다 된 것임
+- 만약 작가와 책 정보를 AuthorBooks 테이블을 이용하여 조인하고 싶다면 다른 한 가지 매핑 속성인 Association 이 설정되어 있어야 함
+
 #### Association 속성
+- 이 속성은 어떻게 두 클래스가 연관되어 있는지 확정해줄 때 사용함
+- Tale이나 Column과는 달리 연관관계가 동작하기 위해 최소한 하나의 매개변수가 필요함
+- [Association 속성이 사용하는 매개변수 목록]
+  | 매개변수 이름 | 설명                                                         |
+  | ------------- | ------------------------------------------------------------ |
+  | DeleteRule    | 관계에서 연쇄 삭제 정책을 설정하는 매개변수                  |
+  | DeleteOnNull  | 외래키 항목이 null 사용이 불가능할 때 1:1 관계에서 연쇄 삭제 정책을 설정하기 위해 사용함 |
+  | IsForeignKey  | 부모-자식 관계에서 자식에 해당되는 클래스임을 나타내는 매개변수 |
+  | IsUnique      | 외래키와 기본키가 양쪽 테이블에 모두 저장되어 있는 1:1 관계를 나타내기 위해 사용됨. 이 옵션은 대부분의 관계가 보통 1:0-1 또는 1:n의 관계에 가깝기 때문에 자주 사용되지 않음 |
+  | Name          | 메타데이터에서 데이터베이스를 동적으로 생성할 때, 사용하는 외래키의 이름을 명시하는 매개변수 |
+  | OtherKey      | 관련된 키값들을 포함하는 연관된 클래스의 열을 지정해주기 위해 사용됨. 만약 매개변수가 설정되지 않았다면 자동으로 다른 클래스의 ID열이 사용됨 |
+  | Storage       | 연관된 자식 객체 EntitySets를 추적하기 위한 내부 항목을 지정해줌 |
+  | ThisKey       | 로컬 ID 항목을 포함하는 프로퍼티를 지정해줌. 만약 설정되지 않았다면 Column 속성의 IsPrimary가 설정해준 열이 사용됨. 먄약 키가 여러 개의 열로 구성되어 있다면, 쉼표로 구분하여 각각 열거해줌 |
 
+- 이런 정보가 주어졌을 때, 어떻게 새 Author 클래스와 BookAuthor 클래스 간의 연결을 추가해줄 수 있는지 알아보자
+  ```C#
+  private EntitySet<BookAuthor> _BookAuthors;
+  [Assocation(Name="FK_BookAuthor_Author", Storage="_BookAuthors", OtherKey="Author", ThisKey="ID")]
+  public EntitySet<BookAuthor> BookAuthors
+  {
+    get
+    {
+        return this._BookAuthors;
+    }
+    set
+    {
+        this._BookAuthors.Assign(value);
+    }
+  }
+  ```
+- Author 클래스의 기본키는 ID 프로퍼티(ThisKey), BookAuthor에서 연관된 키는 Author 프로퍼티(OtherKey).
+- 우리는 해당 컬렉션(Storage) 을 _BookAuthors라고 불리는 EntitySet<BookAuthor> 항목에 저장할 것임  
+- 우리의 클래스 속성 메타데이터에서 데이터베이스를 자동생성하고 싶다면, 해당 외래키의 이름을 FK_BookAuthor_ Author (Name)으로 정할 것임
 
+- 이런 매핑구조를 이용하여 선언적으로 표준 질의 표현식을 이용하여 객체를 다루며, 프레임워크가 자질구레한 데이터 접근에 수반되는 귀찮은 코드들을 대신 처리해줄 것으로 기대가 됨
+- 클래스에 직접적으로 매핑을 내장하는 것은 유지보수성의 측면에서는 양날의 검임
+  - 비즈니스 클래스 생성 시에는 대부분의 개발자가 DB와 객체의 관계에 대해 신중하게 다룸
+  - 개발자가 수정하는 사항들이 계속 다루는 과정에서 누락되거나 미아가 되는 경우가 발생하지 않음
+  - 애플리케이션을 관리하는 과정에서 속성들이 코드의 여기저기에 산발적으로 정의되어 있다면 신속하게 찾아서 관리하는 데 어려움이 있을 수 있음
 
 ### 7.1.2 외부 XML 파일과 매핑하기
 
