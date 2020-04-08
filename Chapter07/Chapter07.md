@@ -203,7 +203,63 @@ public byte[] TimeStamp {get; set;}
 - 속성들은 비즈니스 클래스 정의에서 제거될 수 있음 -> 업무상의 요구사항에 집중할 수 있도록 도와줌
 - XML 매핑 파일들은 매핑을 중앙에 집중하여 관리할 수 있도록 해줌 -> 매핑을 유지보수하는 측면에서도 큰 장점이 있음
 
-- 외부 파일을 이용하기 위해 완전히 다른 새로운 프로퍼티들을 배우는 
+- 외부 파일을 이용하기 위해 완전히 다른 새로운 프로퍼티들을 배우는 것에 대해 걱정할 필요 없음
+- XML 매핑 개체들은 이미 논의한 속성들과 매우 비슷하게 생김, 오히려 관리 코드의 양이 줄어듬
+- 외부 매핑 파일을 이용하면 클래스 내에서 정적으로 정의된 속성들을 제거 가능
+- 대신 다음의 방법으로 Author 객체를 DB에 매핑이 가능함
+
+```XML
+<?xml version="1.0" encoding="utf-16"?>
+<Database Name="lia"
+ xmlns="http://schemas.microsoft.com/linqtosql/mapping/2007">
+  <Table Name="Author">
+    <Type Name="LinqInAction.LinqBooks.Common.Author">
+      <Column Name="ID" Member="ID" Storage="_Id"
+      DbType="UniqueIdentifier NOT NULL" IsPrimaryKey="true"/>
+      <Column Name="LastName" Member="LastName" 
+      DbType="VarChar(50) NOT NULL" CanBeNull="False"/>
+      <Column Name="FirstName" Member="FirstName" 
+      DbType="VarChar(30)"/>
+      <Column Name="WebSite" Member="WebSite"
+      DbType="VarChar(200)"/>
+      <Column Name="TimeStamp" Member="TimeStamp"
+      DbType="rowversion NOT NULL" CanBeNull="False"
+      IsDbGenerated="True" IsVersion="True" AutoSync="Always"/>
+    </Type>
+  </Table>
+</Database>
+```
+- 앞서 했던 모든 추가적인 매핑은 XML 파일로 옮겨짐
+- XML 매핑 파일에 담긴 정보는 이미 클래스의 속성으로 사용한 매개변수들과 거의 완벽하게 일치함
+- 어떤 클래스와 어떤 속성에 매핑하는지를 설정해주기 위해서 Type과 Member 항목을 반드시 설정해야 함
+
+- XML의 최상위 노드는 Database 객체임
+- 여기에 매핑하고자 하는 Database의 이름을 명시해주면 됨
+- Database는 복수의 테이블 개체를 가지고 있을 수도 있고 각각의 Table 개체들은 주어진 테이블을 매핑할 댸 사용하는 Type이라는 개체를 포함함
+- Type은 원하는 개수의 Column과 Association 개체를 가질 수 있음
+- Column을 위한 속성과 Association 개체는 Member라는 속성을 기바으로 한 매핑에서 보기 힘들었던 추가적인 값을 하나 더 포함함
+
+- 직접적으로 각각의 개체를 프로퍼티로 묘사하는 것이 아니기 떄문에 어떤 프로퍼티 또는 Member에 열이 매핑되어 있는지 명시해줘야 함
+- 클래스 정의의 속성들을 직접 Column과 Association 개체로 일대일 대응시켜 이전 가능
+- XML로 옮기면서 Member 속성을 잊지 않도록 항상 주의!!
+
+- 새로운 XML 매핑 파일방식을 이용하기 위해, DataContext가 선언에 의한 기본 속성 대신 매핑 파일을 이용하도록 지시해야 함
+- 다음 예제에서는 어떻게 외부 매핑 파일(lia.xml)을 DataContext에 붙이고 XML 매핑 파일을 이용해서 잘 설명되지 않는 상태의 비즈니스 객체들에 대해 질의할 수 있는지 살펴볼 것
+- [DataContext에 외부 XML 매핑 파일을 붙이기]
+```C#
+XmlMappingSource map =
+  XmlMappingSource.FromXml(File.ReadAllText(@"lia.xml"));
+// System.Data.Linq.XmlMAppingSource 인스턴스를 애플리케이션 디렉토리 내의 lia.xml 파일 내에 생성함
+
+DataContext dataContext = 
+  new DataContext(liaConnectionString, map);
+// 이 문서는 다음과 같은 메소드 중 하나로 읽어들일 수 있음
+// FromXml, FromUrl, FromStream, FromReader, XMLMappingSource 객체를 DataContext에 붙이기 위해서는 오버로딩된
+// 생성자의 두 번쨰 매개변수로 전달함
+
+Table<Author> authors = dc.GetTable<Author>();
+// 외부 매핑 파일을 DataContext에 연결하고 나면 이전 장에서 배운 질의 테크닉들을 모두 사용할 수 있음
+```
 ### 7.1.3 SqlMetal 도구를 사용하기
 
 ## 7.2 질의 표현식을 SQL로 변환하기
