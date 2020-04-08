@@ -336,7 +336,70 @@ new ParameterExpression[] {bookParam}));
 - 데이터베이스에 대한 접근을 좀 더 일반화시켜서 여러 DB 엔진을 지원하는 공통된 질의 문법을 만들려는 노력이 있어왔음
 - 종종 이런 해법들은 질의를 문자열화시켜서 문자열 조작을 통해 한 가지 표현법을 다른 표현법으로 변환해내는 방법에 의존하기도 함
 
-## 7.3 객체의 생명주기
+- 다른 질의 변환 시스템과는 달리 LINQ to SQL은 질의 표현식을 표현식 트리로 만들어내는 방법으로 질의를 구조화하여 비교함
+- 표현식을 보존함으써 우리는 추가적인 절을 질의에 조합하는 방법으로 질의에 기능을 추가할 수 있음
+  - 질의 내에서 엄격한 형을 유지하고, IDE와의 더 나은 통합 및 메타데이터의 보존을 도모할 수 있음
+- **가장 중요한 점:** 목적을 담은 문자열을 해석하기 위해 수고할 필요가 없음
+- 표현식 트리는 컴파일러가 구현된 대로 좀 더 최적화된 방법을 사용할 수 있도록 해줌
+- 이 개념을 IQueryable 예에 적용해보며 확인해보자
+```C#
+LinqBooksDataContext context = new LinqBooksDataContext();
+
+var bookParam = Expression.Parameter(typeof(Book), "book");
+
+var query = 
+  context.Books.Where<Book>(Expression.Lambda<Func<Book, bool>>
+  (Expression.GreatherThan(
+    Expression.Property(
+      bookParam,
+      typeof(Book).GetProperty("Price")),
+    Expression.Constant(30M, typeof(decimal?))),
+  new ParameterExpression[] { bookParam }));
+```
+- 표현식 형에 대해 살펴보자
+- Lambda, GreatherThan, Property, Parameter, Constnat 각각의 이런 표현식 형은 좀 더 작은 부분의 단위들로 나누저여 있음 -> 더 많은 정보를 담을 수 있음
+- Datacontext가 속성이나 XML로 정의된 매핑 등의 메타데이터를 포함하고 있으므로 데이터베이스가 알아듣는 형태로 객체의 표현형태를 손쉽게 바꿀 수 있음
+
+- 표현식 트리를 좀 더 깊게 살펴보면, GreatherThan BinaryExpression을 적용할 때, 추가적인 노드들이 어떻게 삽입되는 지 확인 가능
+- GreatherThan을 CLR 형에 대해 수행 시에는 유사한 형을 데이터끼리 비교할 수 있도록 해줘야 함
+- 이런 의미에서 ConstantExpression을 null이 될 수 있는 Decimal형으로 바꿔서 책의 Price 프로퍼티에 있는 데이터 형과 비교할 수 있어야 함
+- 하지만 굳이 DB에 SQL문 보낼 떄 사용자가 이걸 신경 쓸 필요 없음
+
+- LINQ to SQL은 어떻게 이 많은 정보를 모두 조합하여 DB가 알아볼 수 있도록 반환하는 것일까
+  - IQueryable<T> 형의 결과들에 대해 반복문을 수행할 떄 전체 Expression값이 지정된 Provider에게 넘겨짐
+  - 프로바이더는 Visitor패턴을 이용해서 Where와 GreatherThan과 같이 자기가 다룰 줄 아는 표현식 형들을 골라냄
+  - 트리를 아래부터 천천히 확인해서 상수를 null을 대입할 수 있는 형으로 바꿔줌... 
+  - 자신이 필요없는 노드들을 모두 확인함
+  - 그런 후에 SQL과 더욱 유사한 형태인 평행 표현식 트리 형태로 만들어줌
+
+- 표현식이 해석된 후에는, 프로바이더가 XMl 매핑에서 가져온 테이블과 열의 이름들을 기반으로 객체를 적절히 변환 -> 최종 SQL 문을 만들어냄
+- SQL 문이 완성되면 그것을 DB에 전송하며, 반환되는 결과값들은 적절한 매핑 정보를 이용하여 필요한 객체 컬렉션을 채우는 데 이용됨
+
+- 표현식 트리를 특정 프로바이더에 대한 구현물로 변환해내는 것은 트리에 함수를 추가하는 과정을 거치면서 매우 복잡해짐
+- 만약 모든 가능한 질의의 조합을 다루는 것에 대해 더 알고 싶다면 LINQ to SQL을 설계한 사람 중 한 분인 매트 워렌의 블로그에서 IQueryable 프로바이더를 어떻게 구현했는지 설명한 글을 읽기
+  - http://blogs.msdn.com/mattwar/archive/2007/07/30/linq-building-an-inqueryable-provider-patt-i.aspx.
+
+## 7.3 개체의 생명주기
+- LINQ 는 언어 내에서 엄격하게 형을 가지는 질의를 직접 구성할 수 있는 기능 제공
+- 게다가 프레임워크는 객체 변화를 관리하고 그 값에 따라 데이터베이스 소통을 함
+
+- DataContext 객체는 개체의 생명주기상에서 매우 중요한 역할을 함
+- DataContext는 데이터베이스에 대한 연결을 관리, 매핑을 평가 -> 표현식 트리를 사용 가능한 구조로 변환시켜 줌
+- 만약 데이터를 단순히 보여주는 것만을 목표로 했다면 매핑과 변환 서비스는 요구사항을 충족시키기에 충분할 것
+- 생명주기는 객체를 전달하는 순간 끝나게 될 것임
+
+- 애플리케이션들은 질의의 결과를 표출하기도 하고 변화를 주기도 함
+- 객체 생명주기를 완전하게 다루기위해 DataContext는 받아온 객체들에 대한 참조도 관리함
+- DataContext는 받아온 객체의 정체성과 변한 값을 추적하면서 변화를 관찰함
+
+- ![](cap1.PNG)
+- 이 그림은 DataContext가 제공하는 서비스들을 보여줌
+
+- 개체의 생명주기는 처음 값을 DB에서 읽어왔을 때부터 시작됨
+- 결과 객체를 애프리케이션 코드에 전달하기 전에, DataContext는 객체에 대한 참조를 저장하고 정체성 관리 서비스는 매피에서 지정된 정체성을 바탕으로 객체를 목록에 관리함
+- 이 값이 저장되어 있기 떄문에 정체성을 기반으로 하여 이전 객체에 접근 가능하게 됨
+
+
 ### 7.3.1 변화를 추적하기
 ### 7.3.2 변화를 저장하기
 ### 7.3.3 연결이 끊어진 데이터와 작업하기
