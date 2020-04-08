@@ -310,7 +310,7 @@ Table<Author> authors = dc.GetTable<Author>();
 IEnumerable<Book> query =
   System.Linq.Enumerable.Where<Book>(
     delegate(Book book) {return book.Price > 30M;});
-``` 
+```
 - 그러나 Books 객체가 IQueryable<T>를 구현했따면 컴파일러는 다음 예제와 같이 결과를 표현식 트리로 만들어내는 기능을 유지하여 구현할 것임
 - [표현식으로 표현된 질의]
 ```C#
@@ -399,8 +399,60 @@ var query =
 - 결과 객체를 애프리케이션 코드에 전달하기 전에, DataContext는 객체에 대한 참조를 저장하고 정체성 관리 서비스는 매피에서 지정된 정체성을 바탕으로 객체를 목록에 관리함
 - 이 값이 저장되어 있기 떄문에 정체성을 기반으로 하여 이전 객체에 접근 가능하게 됨
 
+- 매번 DB의 값들에 접근할 떄마다 DataContext는 정체성 관리 서비스를 통해 이전에 반환된 객체들 중 동일한 정체성을 가지고 있는 것이 있는지 확인
+- 만약 있다면, DataContext는 테이블에 새로 매핑하는 대신 내부 캐시에 저장된 값을 가져올 것임
+- 원래 값을 저장해두는 방법으로 클라이언트들이 다른 사용자들이 만든 수정사항들에 대해 신경 안 쓰고 값을 수정할 수 있도록 해줌
+- 그래서 개발자는 수정사항들이 저장되는 시점까지 동기화 문제에 대해 신경 안 써도 됨
+
+- 컨텍스트가 반환된 값들을 임시로 저장하고 있다면 정보를 요구할 떄마다 데이터베이스에 대한 질의가 수행되지 않아도 됨
+- But... 사용자가 만약 ToList나 유사한 확장 메소드로 미리 값을 받아놓기만 하고 메모리내에서 사용 안한다면 매번 정보를 요구할 때마다 질의가 수행될 것
+- 만약... 컨텍스트가 이미 객체에 대해 알고 있다면 ID에 해당하는 열만 사용되고 나머지 열들은 무시됨
+
+- 자동화된 객체 정체성 구현이 개발자를 곤란하게 만들 수 있는 경우:
+  - Single 확장 메소드를 이용하는 것 = 원래의 캐시 젗액에 어긋나는 예외
+      - Single을 이용하면 내부 캐시가 먼저 확인됨, 만약 요청된 객체가 캐시에 존재하지 않으면 DB가 질의될 것임
+
+- 테이블에 저장되고 테이블에서 삭제되는 항목들이 질의 가능할 것으로 생각하겠지만 DB는 실제로 자신이 알고 있는 값에 대해서만 질의 가능 
+  - InsertOnSubmot or DeleteOnSubmit이 수행되었다고 해도 실제로 SUbmitchanges 메소드로 그런 변화가 저장소에 저장되기 전까지는 DB에서 변화 모름
+  - XXXOnSubmit 메소드들이 일반적인 IList 메소드 이름 대신에 사용된 주된 이유임
 
 ### 7.3.1 변화를 추적하기
+- 객체에 변화를 줄 때마다, DataContext는 그 속성의 원본 값과 새로 변한 뒤의 값을 대조 -> 변화 추적기능을 이용하여 관리함
+- 원본 값과 수정 값을 둘 다 보관하고 있으므로 DB에 대한 수정을 이것이 필요한 레코드만 업데이트해서 최대한 효율적으로 처리 가능
+- 밑의 예제는 두 개의 DataContext가 있는데 각각 별도로 객체 정체성과 변화 추적을 관리함
+- [정체성 관리와 변화 추적]
+```C#
+LinqBooksDataContext context1 = new LinqBooksDataContext();
+LinqBooksDataContext context2 = new LinqBooksDataContext();
+
+context1.Log = Console.Out;
+context2.Log = Console.Out;
+
+Guid Id = new Guid("92f10ca6-....");
+
+Subject editingSubject = 
+  context1.Subjects.Where(s => s.Id == Id).SingleOrDefault();
+
+ObjectDumper.Write(editingSubject);
+ObjectDumper.Write(context2.Subjects.Where(s => s.ID == Id));
+
+editingSubject.Description = @"Testing update";
+
+ObjectDumper.Write(Context1.Subjects.Where(s => s.ID == Id));
+ObjectDumper.Write(Context2.Subjects.Where(s => s.ID == Id));
+```
+
+- 첫 번째 컨텍스트에서 editingSubject를 가져옴, 두 번째 컨텍스트에서 editingSUbject와 데이터베이스의 값을 모두 가져오면 다음과 같음
+
+- [변화를 주기 전과 후에 질의가 반환해주는 값의 상태]
+- | 동작                    | Context1 | Context2 | 데이터베이스 |
+  | ----------------------- | -------- | -------- | ------------ |
+  | 원래 질의에서 반환된 값 | 원본     | 원본     | 원본         |
+  | 변화를 준 후의 재질의   | 변함     | 원본     | 원본         |
+
+- 원래 질의를 다시 수행시켜 결과를 내보낼 때, context1에 대한 질의가 반환한 설명은 새로운 설명값임을 확인 가능함
+
+  
 ### 7.3.2 변화를 저장하기
 ### 7.3.3 연결이 끊어진 데이터와 작업하기
 
