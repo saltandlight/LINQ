@@ -260,11 +260,81 @@ DataContext dataContext =
 Table<Author> authors = dc.GetTable<Author>();
 // 외부 매핑 파일을 DataContext에 연결하고 나면 이전 장에서 배운 질의 테크닉들을 모두 사용할 수 있음
 ```
-### 7.1.3 SqlMetal 도구를 사용하기
+- XML 매핑은 정의들을 중앙에서 별도로 정리해서 관리하면서 DB의 스키마 변화에 따라 동적으로 변경 가능함
+- XML  파일을 읽어들이고 해석하는 과정은 물론 속성을 이용하는 것에 비하여ㅑ DataContext를 생성하는 데 더 많은 성능상의 부하를 유발 가능함
 
+- XML이나 속성 기반의 매핑은 손으로 클래스와 매핑을 생성하고 관리해야 한다는 단점이 있음
+- Visual Studio는 SqlMetal과 GUI 환경에서 동작하는 LINQ to SQL 디자이너라는 두 가지 자동화 옵션을 제공함
+
+### 7.1.3 SqlMetal 도구를 사용하기
+- DB에 SqlMetal 도구를 사용하여 해당하는 비즈니스 클래스들을 생성해냄
+- SqlMetal을 이용하는 기본적인 문법은 SqlMetal [switches] [input file]임.
+
+- ... 생략(직접 해봐야 함)
+### 7.1.4 LINQ to SQL 디자이너
+- 개발자들이 데이터 매핑을 눈으로 보면서 관리하고 확인할 수 있도록 Visual Studio에는 디자이너라는 도구가 내장되어 있음
+- 디자이너는 개발자들이 DB에서 객체를 드래그 앤 드롭으로 가져오거나 개념적 모델을 직접 더하면서 눈으로 확인하면서 매핑을 관리할 수 있도록 해줌
+- 특정한 데이터 관계를 어떻게 맺어줘야 할 지 확실하지 않을 때, 디자이너 도구를 한 번 사용해보는 것도 괜찮다.
+- 디자이너가 만들어준 코드 수정 가능
+
+- ... 생략(직접 해봐야 함)
 ## 7.2 질의 표현식을 SQL로 변환하기
+- LINQ to SQL 을 잘 이해할 수 있는 부분은 질의 표현식에 대한 부분임
+- LINQ의 질의기능은 IEnumerable<T>를 확장하여 구현하는 형들을 바탕으로 하고 있음 -> IEnumerable<T>를 구현하기 위한 EntitySet과 Tables를 필요로 함
+
+- 자연적으로 EntitySet<T>와 Table<T>는 IEnumerable<T>를 구현함
+- But... 그게 전부였다면 필터링이나 정렬과 같ㅇㄴ 모든 질의기능들은 클라이언트에서 별개의 코드로 구현되어 있었어야 함
+- 그런 작업이 서버에서 이루어질 수 있도록 네트워크 소통량 등의 이득을 볼 수 있게 하려고 더 특화된 형태로 구현할 필요 있었음
+- LINQ는 그런 의미에서 IQueryable<T>라는 IEnumerable<T>의 더 확장된 형태를 이용함
+
 ### 7.2.1 IQueryable
+- LINQ to SQL이 LINQ to Objects에 비해 가진 가장 큰 장점 중 하나: 질의 표현식을 받아들여 다른 형식으로 변환하는 기능을 가짐
+- 이런 기능을 구현하기 위해 객체들은 질의의 구조와 관련된 추가적 정보를 노출시킬 필요 있음
+- LINQ to Objects의 모든 질의 표현식은 IEnumerable<T>를 확장하도록 구축되어 있음 
+- 그러나 IEnumerable<T>는 데이터에 대하여 반복적인 작업을 수행할 수 있는 기능만 제공
+- 필요한 변환만을 가능하게 할 수 있게 질의의 정의를 쉽게 분석하는 데 필요한 정보를 미포함
+- .NET Framework 3.5는 IQueryable이라는 IEnumerable을 확장하면서 필요로 하는 정보들까지 포함하는 새로운 인터페이스를 포함하고 있음
+
+- IQueryable은 IEnumerbale을 상속하는 구현 클래스를 필요로 함
+- 이것이 포함하는 ElementType, 수행되어야 하는 동작을 표현하는 Expression, IQueryProvider 제네릭 인터페이스를 구현하는 세 가지 정보들을 담아야 한다는 조건이 있음
+
+- 인터페이스 구현을 포함함 -> IQueryable은 SQL Server가 아닌 다른 SQL flavor를 비롯한 다른 데이터 형태에 대해 추가적인 프로바이더 모델을 지원 가능하게 됨
+- 프로바이더는 IQueryable 표현식에 포함된 정보를 가져다가 DB가 인식할 수 있는 형태의 표현으로 변환하는 작업을 함(매우 어려움)
+- 변환은 CreateQuery라는 메소드에서 받아서 처리함, Execute 메소드는 변환의 결과물을 수행하는 역할을 함 
+
+- Expression 프로퍼티는 메소드의 정의를 포함
+- 다음 질의의 경우를 생각해보자
+`var query = books.Where(book => book.Price > 30);`
+- 만약 책 객체가 IEnumerable<T>를 구현했다면 컴파일러는 다음고 같으 표준의 정적인 메소드로 변환했을 것
+```C#
+IEnumerable<Book> query =
+  System.Linq.Enumerable.Where<Book>(
+    delegate(Book book) {return book.Price > 30M;});
+``` 
+- 그러나 Books 객체가 IQueryable<T>를 구현했따면 컴파일러는 다음 예제와 같이 결과를 표현식 트리로 만들어내는 기능을 유지하여 구현할 것임
+- [표현식으로 표현된 질의]
+```C#
+LinqBooksDataContext context = new LinqBooksDataContext();
+
+var bookParam = Expression.Parameter(Typeof(Book), "book");
+
+var query = 
+  context.Books.Where<Book>(Expression.Lambda<Func<Book, bool>>
+    (Expression.GreaterThan(
+  Expression.Property(
+    bookParam,
+    typeof(Book).GetProperty("Price")),
+  Expression.Constant(30M, typeof(decimal?))),
+new ParameterExpression[] {bookParam}));
+```
+- 질의를 사용하는 데 사용되는 과정들을 그대로 보존함 -> IQueryable의 Provider 구현물은 언어구조를 DB가 이해할 수 있는 형태로 변환할 수 있는 기능을 그대로 갖추게 됨
+- 질의구조에 대해 추가적으로 정렬, 그룹화, 누적연산, 페이지별 구분 등의 기능을 추가하여 한 번에 수행시킬 수 있음
+
 ### 7.2.2 표현식 트리
+- 표현식 트리는  LINQ to SQL에게 동작하는 데 필요한 정보들을 전달해주는 역할을 함
+- LINQ to SQL에서 기존의 표현식 트리를 가져와서 DB가 알아듣는 문법으로 질의 표현식을 변환하기 위해 가지별로 분석함
+- 데이터베이스에 대한 접근을 좀 더 일반화시켜서 여러 DB 엔진을 지원하는 공통된 질의 문법을 만들려는 노력이 있어왔음
+- 종종 이런 해법들은 질의를 문자열화시켜서 문자열 조작을 통해 한 가지 표현법을 다른 표현법으로 변환해내는 방법에 의존하기도 함
 
 ## 7.3 객체의 생명주기
 ### 7.3.1 변화를 추적하기
