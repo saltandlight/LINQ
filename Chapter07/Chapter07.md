@@ -462,9 +462,48 @@ ObjectDumper.Write(Context2.Subjects.Where(s => s.ID == Id));
 - 그래서 만약 하나의 책에 대한 설명을 다른 책으로 옮기려고 하면 DB에 실제로 저장하라고 명령하기 전까지느 변화 추적기능은 변화 내용을 메모리에 갖고 있을 것임.
 
 ### 7.3.2 변화를 저장하기
+- 지금까지 가했던 수정사항들은 메모리상에서만 저장되어 있을 뿐 DB에 영원히 반영되지 않고 DataContext의 정체성 추적기능에 의해 차후에 적용되는 질의드렝 대해서만 적용되었을 것임
+- 변화를 DB에 영구적으로 저장하기 위해서는 SubmitChanges를 한 번 호출해줘야 함
+- SubmitChanges가 호출되었을 때, 컨텍스트는 그것이 추적하고 있는 객체의 원래 값을 현재의 값과 비교함
+- 만약 두 값 사이에 차이가 있다면 컨텍스트는 변화를 잘 저장해둔 후, DB가 수행해야 할 질의를 동적으로 작성해 줌
 
+- 어떠한 충돌도 일어나지 않고 적절한 레코드들이 업데이트되었다는 가정하에, 컨텍스트는 그것이 저장하고 있는 변화의 목록들을 실제로 데이터베이스에 적용해줌
+- 만약 문제가 있다면 DB의 동기화 관리기능을 기반으로 하여 변화들은 취소되고 원상태로 복귀됨
 
+- [정체성과 변화 추적 관리를 이용하면서 변화를 저장하기]
+```C#
+LinqBooksDataContext context1 = new LinqBooksDataContext();
+LinqBooksDataContext context2 = new LinqBooksDataContext();
 
+Guid Id = new Guid("92f10ca6-...");
+
+context1.Log = Console.Out;
+context2.Log = Console.Out;
+
+Guid Id = new Guid("92f10ca6-....");
+
+Subject editingSubject = 
+  context1.Subjects.Where(s => s.Id == Id).SingleOrDefault();
+
+Console.WriteLine("Before Changes:");
+ObjectDumper.Write(editingSubject);
+ObjectDumper.Write(context2.Subjects.Where(s => s.ID == Id));
+
+editingSubject.Description = @"Testing update";
+
+Console.WriteLine("After Change:");
+ObjectDumper.Write(context1.Subjects.Where(s => s.ID == Id));
+ObjectDumper.Write(context2.Subjects.Where(s => s.ID == Id));
+
+context1.SubmitChanges();
+
+Console.WriteLine("After Submit Changes:");
+ObjectDumper.Write(context1.Subjects.Where(s => s.ID == Id));
+ObjectDumper.Write(context2.Subjects.Where(s => s.ID == Id));
+
+LinqBooksDataContext context3 = new LinqBooksDataContext();
+ObjectDumper.Write(context3.SUbjects.Where(s => s.ID == Id));
+```
 ### 7.3.3 연결이 끊어진 데이터와 작업하기
 
 참고: [https://www.wordrow.kr/%EC%9E%90%EC%84%B8%ED%95%9C-%EC%9D%98%EB%AF%B8/%EB%82%99%EA%B4%80%EC%A0%81%20%EB%8F%99%EA%B8%B0%ED%99%94/1/](https://www.wordrow.kr/자세한-의미/낙관적 동기화/1/)
