@@ -70,9 +70,91 @@ WHERE ID = @ID AND Title = @OldTitle AND
    Summary = @OldSummary AND
    Notes = @OldNotes
    RETURN @@RowCount
+-- 업데이트에 성공했는가?
  ```
 - 업데이트에 성공했는 지 확인하려면 업데이트 수행 이후의 데이터베이스 내의 RowCount를 세어보면 됨.
 - 만약 1이 반환된다면 원래 있던 값이 변하지 않았고 업데이트가 동작했다고 할 수 있음 
+- 만약 0이 반환된다면 처음 로딩된 값과 동일한 값을 가진 레코드를 찾을 수 없음 -> 데이터를 받아온 이후 업데이트하는 사이에 다른 사람이 그 데이터를 바꾸어 논 것임
+- 그 시점에는 사용자에게 충돌이 있었다는 점을 통지 -> 동기화 위배상황을 적절히 처리하면 됨
+
+- 클래스가 낙관적 동기화 모델을 다르도록 구현하는 것은 매우 쉬운 일임.
+- 사실 테이블과 열 매핑 구축만으로도 낙관적 동기화 모델이 기본적으로 적용되었다고 볼 수 있음
+- SubmitChanges 를 호출 시 DataContext는 자동적으로 낙관적 동기화를 사용할 것임
+- 간단한 업데이트 수행을 위해 어떤 SQL이 작성되었는지 살펴보려면 다음과 같이 테이블에서 가장 비싼 책을 골라내고 그 가격을 10% 할인하려고 시도하는 경우를 고려해보자
+- [LINQ to SQL을 이용한 기본적인 동기화 구현]
+```C#
+Ch8DataContext context = new Ch8DataContext();
+Book mostExpensiveBook = (from book in context.Books
+                          orderby book.Price descending
+                          select book).First();
+decimal discount = .1M;
+mostExpensiveBook.Price -= mostExpensiveBook.Price*discount;
+context.SubmitChanges();
+```
+- 위 코드는 책을 선택하기 위한 SQL과 업데이트하는 SQL을 나타냄
+```sql
+UPDATE  [dbo].[Book]
+SET     [Price] = @p
+FROM    [dbo].Book
+WHERE   ([Title] = @p0) AND ([Subject] = @p1) AND ([Publisher] = @p2)
+    AND   ([PubDate] = @p3) AND ([Price] = @p4) AND ([PageCount] = @p5)
+    AND   ([Isbn] = @p6) AND ([Summary] IS NULL) AND ([Notes] IS NULL)
+    AND   ([ID] = @p7)
+```
+- DataContext에 Submitchanges가 호출되면 Update문이 자동으로 생성되어 서버에서 수행됨
+- WHERE절에 전달된 이전 값을 기준으로 이들 값과 일치하는 레코드가 없다면 DataContext는 이 문장이 어떤 레코드도 수정하지 않는다는 것을 알게 될 것임
+- 어떠한 레코드도 영향을 받지 않는 경우에는 ChangeConflictException 예외가 발생함
+
+- 상황에 따라 낙관적 동기화를 구현하기 위해 필요한 매개변수의 개수가 성능상의 문제를 야기할 수도 있음(개수가 너무 많아서...)
+- 그런 경우에는, 매핑을 보다 세밀하게 조정하여 값이 변하지 않았음을 확인하는 데 필요한 최소한의 필드들을 구분 가능
+- UpdateCheck 속성을 설정하면 됨
+    - UpdateCheck는 LINQ to SQL이 항상 열을 낙관적 동기화를 위해 체크하고 있다는 의미에서 Always로 설정되어 있음
+    - 원한다면 값이 변했을 때에만(WhenChanged), 또는 절대 체크 안 되도록(Never)로 설정 가능함
+
+- 만약 UpdateCheck 속성의 강력함을 활용하여 테이블 스키마를 변경하고 싶다면, RowVersion 또는 TimeStamp 열을 각 테이블에 추가하면 됨
+- DB는 자동적으로 행에 변화가 생길 떄마다 RowVersion을 자동으로 업데이트할 것임
+- 동기화 체크는 버전과 ID 열의 조합에 대해서만 이루어지면 될 것임
+- 모든 다른 열은 UpdateCheck=Never로 설정되고 DB는 동기화 체크에 의해 보조될 것임
+- 이런 경우는 Author 클래스를 매핑하는 데 사용한 적이 있음
+- Update문을 살펴보면 TimeStamp열을 이용하여 효율화된 WHERE절을 볼 수 있음
+- [타임스탬프 열을 이용하여 Authors 테이블에 낙관적 동기화를 적용하기]
+```C#
+Ch8DataContext context = new Ch8DataContext();
+Author authorToChange = (context.Authors).First();
+
+authorToChange.FirstName = "Jim";
+authorToChange.LastName = "Wooley";
+
+context.SubmitChanges();
+```
+- 이 문장은 다음과 같은 SQL로 변환됨
+```SQL
+UPDATE  [dbo].[Author]
+SET     [LastName] = @p2, [FirstName] = @p3
+FROM    [dbo].[Author]
+WHERE   ([ID] = @p0) AND ([TimeStamp] = @p1)
+
+SELECT  [t1].[TimeStamp]
+FROM    [dbo].[Author] AS [t1]
+WHERE   ((@ROWCOUNT) > 0) AND ([t1].[ID] = @p4)
+```
+- 표준적인 낙관적 동기화를 모든 필드가 항상 체크하도록 또는 타임스탬프를 이용하는 형태로 수정하는 방법 외에도 다른 동기화 모델이 존재함
+    - 1. 동시에 일어나는 모든 변화를 무시하고 항상 마지막 변경사항만 남기도록 하는 것
+        - 그런 경우에는 UpdateCheck는 모든 속성에 대해 Never로 설정되어 있어야 함
+        - 그러나 동기화가 전혀 필요 없다고 단언할 수 있는 상황이 아닌 이상 이 방법은 그다지 추천할 만한 좋은 선택이 아님
+    - 2. 최고의 선택: 사용자에게 충돌이 있었다는 점을 통지, 그 상황을 잘 봉합하기 위한 대안을 제시해주는 것
+
+- 경우에 따라서 두 사용자가 하나의 테이블 내의 다른 두 개의 열을 동시에 수정할 수 있게 하는 것은 별 문제가 없을 수도 있음
+- 예) 열이 아주 많은 테이블에서 각각 다른 열들의 집합을 다른 객체나 문맥, 상황에서 다루려고 하는 경우에는 UpdateCheck를 Always 보다는 WhenChanged로 설정함 
+- 그러나 이것이 모든 경우에 사용하도록 추천할 수 있는 방법은 아님
+- 여러 개의 필드가 연산된 결과물의 기반자료가 되는 경우에는 더욱 그러함
+- 예를 들어 일반적인 OrderDetail테이블에서 단가나 개수에 수정을 한다면 총계 또한 변해야 함
+- 하나의 사용자가 개수를 수정하는 동안 다른 사용자가 단가를 수정한다면 총계의 계산이 이상해질 것..!
+    - 이런 이유로 자동병합 동기화 관리는 필요하며 실무상황에서 그런 관리가 허용 가능한지는 반드시 확인해야 함
+
+- LINQ to SQL에서 동기화 확인은 필드 수준에서 이루어질 수 있음
+- LINQ to SQL은 여러 사용자 정의형태의 구현물이 존재할 수 있는 유연함을 충분히 제공하고 있음
+- 아무런 설정을 해주지 않았을 때는 기본적으로 완전히 낙관적인 동기화를 지원함
 
 ### 8.1.3 동기화 예외사항을 처리하기
 
