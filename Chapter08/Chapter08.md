@@ -180,14 +180,153 @@ catch(ChangeConflictException)
 - 만약 KeepChanges 옵션을 사용하면 변화된 값을 다시 확인할 필요 없이 단순히 값들이 맞다고 단언, 적절한 행에 그 데이터를 집어넣음
 - 이러한 "마지막 사람이 승리하는" 형태의 메소드는 수정하지 않은 열들을 데이터베이스의 현재 값으로 채워질 것이라는 잠재적인 위험을 내포함
 
-- 만약 업무상 필요하다면, 변화들을 DB에서 가져온 새 값들과병합 가능
+- 만약 업무상 필요하다면, 변화들을 DB에서 가져온 새 값들과 병합 가능
 - 단순히 RefreshMode를 KeepCurrentValues로 바꿔주기만 하면 됨
 
+- 이런 방법으로 다른 사용자가 만든 변화들을 레코드로 가져와 변화를 더할 수 있음
+- 그러나 만약 두 사용자 모두 같은 열에 대해 수정했다면 최종적으로 수정한 값이 첫번째 업데이트된 값을 덮어쓰게 될 것
+
+- 안전하게 두 번째 사용자가 바꾼 값을 무시하고 DB에서 불러온 값을 설정할 수도 있음
+- 그런 경우에는 RefreshMode.OverwriteCurrentValues 옵션을 이용함
+- 이 시점에서 변화를 다시 데이터베이스에 저장하는 것은 그다지 바람직한 선택은 아닐 것.
+- 왜냐하면 현재의 객체와 DB의 값 사이에 차이가 없을 것이기 때문임.
+- 다시 가져온 값을 사용자에게 제공하여 적절히 수정가능하도록 해줌
+
+- 사용자가 가해준 변화의 수에 따라서 사용자는 다시 값을 전부 입력하는 것을 매우 싫어할 수도 있음
+- SubmitChanges는 하나의 명령으로 여러 개의 레코드를 한꺼번에 업데이트할 수 있게 해주기 떄문에 변화의 수는 중요하지 않음
+- 이를 도와주기 위해, SubmitChanges 메소드는 오버로딩된 값 하나를 매개변수로 받아들여 충돌을 어떻게 해결하는지 알고 있음
+- 즉, 더 이상의 해석을 중지하거나 충돌이 있는 객체들을 목록으로 모음
+- ConflictMode는 FailOnFirstConflict와 ContinueOnConflict라는 두 가지 옵션을 담고 있음
+
+- ContinueOnConflict 옵션이 설정되면 충돌이 있는 옵션들 속을 확인하면서 적절한 RefreshMode를 통해 충돌을 해결해줘야 함
+- 다음 코드는 충돌하지 않는 레코드를 저장하고 성공적이지 못했던 값들을 덮어쓰는 과정을 보여줌
+- [사용자의 값들을 DB에서 가져온 값들로 대체하기]
+```C#
+try
+{
+  context.SubmitChanges(ConflictMode.ContinueOnConflict);
+}
+catch
+{
+  context.ChangeConflicts.ResolveAll(RefreshMode.OverwriteCurrentValues);
+}
+```
+- 이 메소드를 사용하면 최소한 몇 개의 값을 우선 저장한 후 사용자에게 충돌이 발생한 항목들을 재입력할 것을 요구 가능
+- 모든 변화를 직접 추적하여 어떤 레코드를 변경해야 하는지 확인해야 하는 사용자 입장에서는 귀찮을 수도...
+- 더 나은 방법은 사용자들에게 변경된 레코드와 항목들을 보여주는 것일 수도 있음
+- LINQ to SQL은 이런 정보에 대한 접근을 허용, 충돌하는 항목의 현재 값, 원래 값, 데이터베이스에 저장된 값을 대조할 수 있게 해줌
+- 다음의 코드는 DataContext의 ChangeConflicts 컬렉션을 이용해서 각 충돌의 세부사항들을 정리할 수 있게 해줌
+- [충돌에 대한 상세한 정보를 보여주기]
+```C#
+try
+{
+    context.SubmitChanges(ConflictMode.ContinueOnConflict);
+}
+catch(ChangeConflictException)
+{
+    var exceptionDetail = 
+        from conflict in context.ChangeConflicts
+        from member in conflict.MemberConflicts
+        //ChangeConflicts 컬렉션 각각의 항목은 충돌이 발생한 객체와 MembersConflicts 컬렉션을 포함함
+        select new
+        {
+            TableName = context.GetTableName(conflict.Object),
+            MemberName = member.Member.Name,
+            CurrentValue = member.CurrentValue.ToString(),
+            DatabaseValue = member.DatabaseValue.ToString(),
+            OriginalVaue = member.OriginalValue.ToString()
+        };
+        //이 컬렉션은 Memebr, CurrentValue, DatabaseValue, OriginalVaue에 관한 정보를 포함함
+        //이런 정보를 갖고 있으면 사용자에게 원하는 형태로 보여줄 수 있음
+    ObjectDumper.Write(exceptionDetail);
+}
+```
+- 이 코드를 이용하면 사용자가 발생시키는 동기화 관련 에러들에 대한 세부정보를 show 가능 
+- 두 사용자가 동시에 책의 가격을 수정하려고 하는 경우, 첫 번째 사용자가 가격을 2달러 올리고, 두 번째 사용자가 가격을 1달러 낮추려고 하면 어떤 일이 발생할까?
+    - 첫 번째 수정하는 사용자는 문제 없지만 두 번째 사용자가 수정사항을 제출하려고 하는 순간 ChangeConflictException이 발생하게 될 것임
+    - 발생한 exceptionDetail에 관한 정보들을 손쉽게 확인 가능
+- 충돌에 관한 세부내용을 알고 나면 두 번째 사용자는 어떻게 그 상황에서 각각의 레코드를 처리해야 하는지에 대한 올바른 판단 내릴 수 있음
+
+- DataContext는 단순히 DB에 대한 연결만을 위한 객체가 아니라는 것은 매우 중요함
+- 이것은 기본적으로 모든 변화를 추적, 동기화 관리를 하는 역할을 수행
+- 개발자는 낙관적 동기화 옵션을 중지시키기 위해 추가적인 일을 해야 함
+
+- 복수의 동시 사용자를 허용하는 시스템을 설계하는 과정에서 동기화 관련 문제들을 어떻게 처리할지 고려해야 함
+- 대부분의 경우 ChangeConflictException이 발생할 지 안 할지의 여부는 별로 안 중요함
+- 중요한 것은 **언제** 발생하느냐임
+- 이것은 예외를 캐치함으로써 발생한 모든 트랜잭션을 롤백하거나 갈등상황을 처리하는 옵션들 중 하나에 의존하게 됨
+
 ### 8.1.4 트랜잭션을 이용하여 충돌을 해결하기
+- 동기화 옵션을 거론할 때, 데이터베이스를 SubmitChanges를 통해 업데이트하면 하나 또는 여러 개의 레코드를 업데이트할 수 있다고 했음
+- 만약 충돌상황을 접하게 되면 어떻게 해결할 것인지 선택이 가능함
+- 그러나... 만약 변화를 롤백하기 위한 노력이 가해지지 않는다면 예외상황 이전에 저장된 변화들은 데이터베이스에 제출될 것이라는 점을 알아야 함
+- 이것은 데이터베이스가 무결성을 갖게 되는 중대한 원인이 될 수 있음
 
+- 왜 어떤 레코드는 저장하고 어떤 레코드는 저장하지 않는 것이 나쁜 건가?
+    - 컴퓨터 상점에 가서 새 컴퓨터를 만들기 위해 몇 가지 부픔을 따로 사는 상황을 가정하자
+    - 보통 마더보드, 케이스, 파워, 하드드라이브, 비디오 카드 등을 고른 후 카운터로 가서 계산을 하게 됨
+    - 스마트한 판매원은 메모리와 프로ㅔ서가 빠졌다는 사실을 알아챔 -> 잠시 둘러보고 자신의 가게에는 호환되는 프로세서가 없다는 것을 알려줄 것임
+    - 그런 경우 선택한 부품들을 사고 다른 가게에 호환되는 프로세서가 있을 것을 기대하면서 살 것인지 아니면 모두 구매 안 할 건지 판단해야 함
 
+- 방금의 컴퓨터를 데이터베이스에 비유하면...
+    - 부품들: 업데이트되어야 할 비즈니스 객체들
+    - 판매원: DataContext
+    - 판매원이 문제를 발견하는 것: DataContext가 ChangeConflictException을 발생시키는 것에 비교 가능
+    - 첫 번쨰 방안: 우선 살 수 있는 것을 사는 선택
+        - ConflictMode.ContinueOnConflict 사용해서 그냥 충돌 무시하고 지나가는 것
+        - DataContext는 충돌 발생 전에 어떻게 그런 상황을 처리하는지 확실히 알고 있어야 함
+    - 두 번째 방안: DB에서 원래의 상태로 모두 환원시킨 후 다시 어떤 변화를 수행할지 결정하는 과정
+    - 세 번째 방안: 그냥 집에 가기로 함
+        - 시도한 모든 변화는 무시되고 원래 상태로 환원됨
 
+- LINQ to SQL은 트랜잭션을 관리하기 위한 세 가지 주요 방법을 제공함
+    - 첫 번째 옵션: 기본 옵션
+        - SubmitChanges가 호출될 떄 트랜잭션을 생성하는 방법
+        - ConflictMode 옵션이 어떻게 설정되어 있느냐에 따라 자동적으로 변화를 환원시켜 줄 것
+    - 두 번쨰 옵션: 수동으로 트랜잭션을 관리하고 싶다면 DataContext가 이미 관리하고 있는 연결을 사용하는 옵션
+        - 이런 경우, Begin Transaction을 DataContext.Connection에 대해 변화를 적용시키기 전에 수행 
+        - 변화가 모두 적용된 후에는 그 결과를 제출하거나 로랩ㄱ하는 선택을 할 수 있음
+        - [DataContext를 통해 트랜잭션을 관리하기]
+        ```C#
+        try
+        {
+            context.Connection.Open();
+            context.Transaction = context.Connection.BeginTransaction();
+            context.SubmitChanges(ConflictMode.ContinueOncConflict);
+            context.Transaction.Commit();
+        }
+        catch(ChangedConflictException)
+        {
+            context.Transaction.Rollback();
+        }
+        ```
+        - DataContext를 이용하여 트랜잭션을 관리하게 되면 여러 개의 DB 연결을 유지하거나 여러 개의 DataCOntext 객체를 다룰 수 없다는 단점이 있음
+    - 세 번째 옵션: .NET framework 2.0에서 소개된 System.Transactions.Transactioncope는 여러 연결에 대해 매끄럽게 대응 가능하도록 설계됨 <- 이것 사용 위해서 System.Transaction 라이브러리를 추가 참조해줘야 함
+        - 이 객체는 데이터 소통을 그것이 다루는 객체에 맞춰서 자동적으로 확장되며 만약 범주가 하나의 DB에 대한 호출로 국한된다면 매우 간단한 DB 트랜잭션을 이용할 것임
+        - 그러나 이것이 여러 개의 클래스와 여러 개의 연결을 필요로 한다면 자동적으로 좀 더 강력한 기업형 트랜잭션으로 전환될 것
+        - TransactionScope는 명시적으로 트랜잭션을 시작하거나 롤백할 것을 요구하지 않음
+        - 개발자는 그걸 완벽하게 종결짓기만 하면 됨
+        - [TransactionScope 객체로 트랜잭션을 관리하기]
+        ```C#
+        using(System.Transactions.TransactionScope scope =
+              new System.Transactions.TransactionScope())
+        {
+            context.SubmitChanges(ConflictMode.ContinueOnConflict);
+            scope.Complete();
+        }
+        ```
+        - 이렇게 하면 다른 동기화 처리 매커니즘과 달리 수행된 트랜잭션을 롤백하기 위해 try-catch문을 이용할 필요가 없음
+        - TransactionScope를 이용하면 Complete 메소드를 호출하지 않은 트랜잭션에 대해 자동을 롤백이 수행됨
+        - 만약 SubmitChanges에서 예외상황이 발생하면 Complete 메소드를 건너뛰게 될 것
+        - 결론: 트랜잭션을 롤백하기 위해 노력할 필요 없음, 그래도 예외처리 부분을 명시해줘야 하긴 함
+
+        - TransactionScope 객체의 진정한 장점: 주어진 문맥에 맞게 범위를 자동으로 설정해줌
+        - 로컬 트랜잭션과도 함께 잘 동작, 여러 가지 데이터가 혼재된 경우에도 잘 동작함
+        - LINQ to SQL을 사용 시 TransactionScope는 유연함을 통해 자연스러운 규모 선택을 가능하게 해주는 매우 뛰어난 방식
+        
 ## 8.2 고급 데이터베이스 기능
+- 많은 경우에 간단한 CRUD 작업은 테이블과 객체 간의 기본적인 매핑만으로 충분함
+- 그러나 가끔 기본적인 매핑에 의한 직접적인 관계만으로는 충분하지 않은 경우가 있음
 
 ### 8.2.1 SQL 전달 : SQL 질의에서 객체를 반환하기
 
