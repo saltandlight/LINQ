@@ -1,4 +1,4 @@
-# Chapter08. LINQ to SQL의 고급기능🦓
+# Chapter08. LINQ to SQL의 고급기능🦄
 - IQUeryable 인터페이스를 매핑 메타데이터와 표현식 트리와 함께 이용하는 방법으로 관계형 데이터에 LINQ to Objects의 질의 표현식을 그대로 사용하는 것에 대해 알아봄
 - 알아볼 내용:
     - 고급화된 LINQ to SQL의 기능들
@@ -157,6 +157,31 @@ WHERE   ((@ROWCOUNT) > 0) AND ([t1].[ID] = @p4)
 - 아무런 설정을 해주지 않았을 때는 기본적으로 완전히 낙관적인 동기화를 지원함
 
 ### 8.1.3 동기화 예외사항을 처리하기
+- UpdateCheck에 Always나 WhenChanged 옵션을 사용할 때, 두 명의 사용자가 동일한 값을 수정하려고 하면 필연적으로 문제가 발생함
+- 그런 경우 DataContext는 두 번째 사용자가 SubmitChanges 요청을 하는 순간 ChangeConflictException을 발생시킬 것
+- 예외상황을 발생시킬 가능성이 있을 때에는 업데이트를 잘 구조화된 예외처리 블록 내에서 수행할 필요가 있음
+
+- 예외가 발생하면 이 예외상황을 잘 해결하기 위한 몇몇 옵션들이 있음
+- DataContext는 단순히 충돌의 당사자가 되는 객체들 뿐만 아니라 원래의 값, 변한한 값, DB내부의 값 사이의 불일치도 검출해냄
+- 이런 수준의 정보를 제공하기 위해 RefreshMode를 설정하여 충돌을 일으키는 레코드들이 데이터베이스에서 새로 수정될 수 있게 함
+- [값이 변하면서 생기는 충돌을 KeepChanges로 해결하기]
+```C#
+try
+{
+    context.SubmitChanges(ConflictMode.ContinueOnConflict);
+}
+catch(ChangeConflictException)
+{
+    context.ChangeConflicts.ResolveAll(RefreshMode.KeepChanges);
+
+    context.SubmitChanges();
+}
+```
+- 만약 KeepChanges 옵션을 사용하면 변화된 값을 다시 확인할 필요 없이 단순히 값들이 맞다고 단언, 적절한 행에 그 데이터를 집어넣음
+- 이러한 "마지막 사람이 승리하는" 형태의 메소드는 수정하지 않은 열들을 데이터베이스의 현재 값으로 채워질 것이라는 잠재적인 위험을 내포함
+
+- 만약 업무상 필요하다면, 변화들을 DB에서 가져온 새 값들과병합 가능
+- 단순히 RefreshMode를 KeepCurrentValues로 바꿔주기만 하면 됨
 
 ### 8.1.4 트랜잭션을 이용하여 충돌을 해결하기
 
