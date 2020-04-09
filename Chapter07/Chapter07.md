@@ -494,16 +494,98 @@ editingSubject.Description = @"Testing update";
 Console.WriteLine("After Change:");
 ObjectDumper.Write(context1.Subjects.Where(s => s.ID == Id));
 ObjectDumper.Write(context2.Subjects.Where(s => s.ID == Id));
+// SubmitChanges 호출 전까지는 메모리 상에서만 변경이 되어 있음
 
 context1.SubmitChanges();
+//DB에 실제로 변경사항이 저장됨, 변화 추적 기능이 context1에서 초기화됨
 
 Console.WriteLine("After Submit Changes:");
 ObjectDumper.Write(context1.Subjects.Where(s => s.ID == Id));
 ObjectDumper.Write(context2.Subjects.Where(s => s.ID == Id));
 
+//동일한 LINQ 질의를 context1과 context2에서 수행시키면 목적에 맞게 다른 컨텍스트의 정체성이나 변화 추적상태에 대해 전혀 모르는 새로운 
+//세 번째 컨텍스트를 생성해줌
 LinqBooksDataContext context3 = new LinqBooksDataContext();
 ObjectDumper.Write(context3.SUbjects.Where(s => s.ID == Id));
 ```
+- 어떻게 객체들이 데이터 컨텍스트 속에서 동작하는지 이에 대해서 아는 것은 매우 중요함
+- DataContext는 애초에 아주 단기간 살아 있어야 하는 객체로 구성됨
+- 개발자는 사용하고 있는 Context에 대해 잘 알고 있어야 하며, 어떻게 정체성고 ㅏ변화 추적 서비스가 예상하지 못한 결말을 피하기 위해 동작하고 있는지 알아야 함
+- 데이터를 전달하기만 할 떄는 전달할 떄마다 컨텍스트 생성한 후 값의 전송 끝나면 버리는 형태를 취함
+- 그런 경우 ObjectTrakingEnabled 프로퍼티를 false로 바꿈으로써 컨텍스트의 최적화가 가능함
+- 이것은 정체성과 변화를 추적하는 서비스 제거 -> 전체적인 성능 향상에 도움이 되지만 변화를 업데이트하는 기능을 끄게 됨
+
+- 만약 데이터를 업데이트할 필요가 있다면, 컨텍스트의 관리 범주에 주의하고 적절하게 조정해야 함
+- 모든 객체와 변화한 값들을 메모리내에 가지고 있는 것의 성능, 메모리 점유율상으 ㅣ비용을 고려해야 함
+- LINQ to SQL을 사용하면서 권장되는 패턴: 질의-보고-편집-제출-폐기
+- 더 이상 객체에 대한 변화를 관리할 필요 없을 때, 컨텍스트를 정리하고 새로운 것을 만들어야 함
+
 ### 7.3.3 연결이 끊어진 데이터와 작업하기
+- DB 연결이 때로 끊길 수도 있다.
+- 이런 상황은 웹 서비스나 WF, WCF 등의 비연결 기반 모델을 사용할 때 발생하는 경우가 많음
+- 비연결 기반 모델에서 데이터를 전달할 때는 결과를 잘 포장해서 캡슐화할 필요가 있음
+- 데이터 컨텍스트를 캐싱하거나 연결되지 않은 사용자에게 전송해줄 수 없기 때문임.
+
+- 데이터 컨텍스트와 객체가 완전 분리되어 동작해야 하므로, 더 이상 데이터 컨텍스트를 제공하는 변화 추적기능이나 정체성 관리 서비스를 이용할 수 없게 됨
+- 클라이언트에게 전달해줄 수 있는 객체의 종류는 아주 간단한 것, or 그런 객체의 XML 표현형태로 제한됨
+- 비연결 기반 모델에서 변화를 관리한ㄴ 것은 엄청난 부담임...
+
+- LINQ to SQL은 비연결 기반 모델을 지원하기 위해 변화를 적용하는 두 가지 방법을 제공
+  - 1. 테이블에 단순히 행을 하나 추가하는 일
+    - 해당 DataContext의 테이블 객체에 대해 InsertOnSubmit  메소드 호출 가능
+    - 새로운 레코드 추가 시에는 변화 추적이 반드시 필요한 것은 아님 -> 기존 레코드와의 충돌 걱정할 필요 없이 InsertOnSubmit에 대한 호출은 제대로 작동할 것
+  - 2. 기존의 레코드를 수정하는 일
+    ```C#
+    public void UpdateSubject(Subject cachedSubject)
+    {
+      LinqBooksDataContext context = new LinqBooksDataContext();
+      context.Subjects.Attach(cachedSubject);
+      cachedSubject.Name = @"Testing Update";
+      context.SubmitOnChanges();
+    }
+    ```
+    - 바뀌는 부분을 잘 연결해줘야 함
+    - DataContext에 변화된 객체를 연결해주는 방법에는 여러 가지가 있지만 가장 선호되는 방법: Attach 메소드 이용 -> DataContext에 레코드를 일반적인 질의처럼 접목시키는 것
+    - 일단 붙여지면 데이터 컨텍스트의 변화 및 정체성 추적기능이 적용하려는 변화들을 관리 가능
+    - 붙여진 객체의 Name을 바꾸는 부분은 변화 추적 서비스에 의 해 추적되고 그에 맞게 업데이트됨
+    - 안 그럴 경우 변화 추적기능이 변화를 관리 못하게 될 수 있음
+    - 만약 업데이트된 어떤 값을 붙이려고 한다면, 객체가 특이한 몇 가지 특성을 갖고 있지 안핟면 이미 수정이 가해진 객체를 간단하게 데이터 컨텍스트에 붙일 수 없음
+    - 먄약 Author 객체에서 한 것처럼 TimeStamp 열을 객체에 구현한다면 오버로딩된 Attach 메소드를 이용하여 붙일 수도 있음
+    - `context.Authors.Attach(cachedAuthor, True);`
+      - 두 번째 매개변수는 객체가 오염된 것으로 간주하게 함
+      - 데이터컨텍스트가 변화된 객체의 목록에 해당 객체를 추가하도록 강제함
+    - 만약 데이터베이스 스키마에 타임스탬프 열을 추가할 만한 여유나 유연성이 없지만 Atach를 이런 식으로 사용해야 한다면 매핑의 UpdateCheck 프로퍼티를 설정해서 값들이 체크되지 않도록 할 수 있음  
+    - 이 두 가지 경우 모두 모든 프로퍼티는 변화가 일어났는지의 여부와 상관없이 무조건 업데이트될 것임
+    
+    - 만약 원본 객체를 캐싱이나 개체내에 직접 보관하는 방식으로 복사본을 하나 갖고 있다면, 새 객체에 Attach 메소드를 이용하여 변화된 버전과 원본 버전을 함께 붙여줄 수 있음
+    - `context.Submects.Attach(changedSubject, originalSubject);`
+    - 이런 경우 모든 열들에 대해 업데이트가 강제되지 않고 변화된 열들만 Update 절에 포함될 것
+    - 원래의 값들은 Where절에서 동기화 확인을 위해 사용될 것
+    - 만약 이런 Attach 시나리오의 혜택을 볼 수 없다면 OriginalSubject를 다음 예제처럼 업데이트 과정 중에 데이터베이스에서 새롭게 전달된 것으로 대체 가능함
+    - [이미 바뀐 연결이 끊어진 객체를 업데이트하기]
+    ```C#
+    public static void UpdateSubject(Subject changingSubject)
+    {
+      LinqBooksDataContext context = new LinqBooksDataContext();
+      Subject existingSubject = context.Subjects
+                                        .Where(s => s.ID == changingSubject.ID)
+                                        .FirstOrDefault<Subject>();
+      existingSubject.Name = changingSubject.Name;
+      //만약 프로퍼티 내의 값들이 동일하다면 변화 추적 서비스는 지속적으로 이런 프로퍼티들의 변화가 필요없다고 판단할 것임
+      //그리고 업데이트 수행을 안 함
+      existingSubject.Description = changingSubject.Description;
+      context.SubmitChanges();
+      //변화된 프로퍼티와 객체들만 변화가 강제될 것임
+    }
+    ```
+    - 업데이트하는 객체들이 꾸준히 데이터베이스에서 수정했던 값드릉 기반으로 하고 있을지 모른다는 사실을 항상 주의!
+    - 동기화 추적 관리를 위해 개발자의 최선의 선택: 원래 레코드 전달 시 데이터베이스 버전을 타임스탬프에 담아 제공하는 것
+
+    - 만약 타임스탬프를 추가하는 방법을 선택하기 어렵다면 원본 값의 복사본을 하나 가지고 있거나 원본 값의 해시값을 저장하고 있어야 햠
+    - 이런 방법으로 원래 값들과 변화된 값의 비교를 통해 직접 동기화 상태를 확인하고 관리 가능함.
+
+    - DataContext의 객체 정체성과 변화 추적기능은 객체의 생명주기에서 매우 중요한 역할을 담당
+    - 만약 단순히 값들을 읽는 것이 목적이라면 ObjectTrackingEnabled 옵션을 false로 설정하는 방법을 통해 DataContext를 읽기 전용 모드로 동작시킬 수 있음
+    - 그러나 값들을 변화시키고 변화를 지속하고자 한다면 객체와 그에 대한 변화를 추적하는 것은 매우 중요한 기능
 
 참고: [https://www.wordrow.kr/%EC%9E%90%EC%84%B8%ED%95%9C-%EC%9D%98%EB%AF%B8/%EB%82%99%EA%B4%80%EC%A0%81%20%EB%8F%99%EA%B8%B0%ED%99%94/1/](https://www.wordrow.kr/자세한-의미/낙관적 동기화/1/)
