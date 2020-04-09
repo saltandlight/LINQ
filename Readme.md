@@ -6,13 +6,7 @@
 
 - Chapter04. LINQ to Objects와 친해지기
 
-- Chapter06. LINQ to SQL을 시작하기
-
-- Chapter07. LINQ to SQL의 내부 매커니즘을 이해하기
-
-- Chapter08. LINQ to SQL의 고급기능
-
-- Chapter09
+- Chapter09. LINQ to XML의 소개 
 
 - Chapter10
 
