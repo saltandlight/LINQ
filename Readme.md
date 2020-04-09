@@ -10,7 +10,7 @@
 
 - Chapter07. LINQ to SQL의 내부 매커니즘을 이해하기
 
-- Chapter08
+- Chapter08. LINQ to SQL의 고급기능
 
 - Chapter09
 
