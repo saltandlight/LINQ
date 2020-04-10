@@ -344,9 +344,186 @@ using(XmlReader reader = XmlTextReader.Create("books.xml")){
 - XML을 파일, URL, XmlReader 객체와 같은 외부 출처에서 불러오는 방법 훑어봄
 
 ### 9.5.2. XML을 해석하기
-
+- 사용하고 싶은 XML이 파일이나 URL로 제고오디지 않는 경우도 있을 수 있음
+- 우리의 애플리케이션의 다른 부분에서 생성된 간단한 문자열 객체일 수도 있음
+- 이런 경우 XElement 클래스가 제공하는 정적 메소드 Parse가 XML을 포함하는 문자열에서 새로운 XElement 객체를 만들어내는 데 유용하게 사용될 수 있음
+- Parse 메소드는 Load 메소드와 비슷한 인터페이스를 갖고 있음
+- [문자열로 된 XML을 XElement로 해석하여 변환하기]
+```C#
+XElement x = XElement.Parse(
+    @"<books>
+        <book>
+            <author>Don Box</author>
+            <title>Essential .NET</title>
+        </book>
+        <book>
+            <author>Martin Fowler</author>
+            <title>Patterns of Enterprise Application Architecture</title>
+        </book>
+      </books>");
+```
+- Load 메소드와 유사하게 Parse 메소드는 LoadOptions.PreserveWhitespace를 두 번째 매개변수에 설정 -> 공백문자의 처리 제어를 도움
+- LINQ to XML은 XmlReader를 이용하여 XML을 해석(parse)해냄
+- 만약 규격에 맞지 않는 XML이 Parse에 들어온 경우에는 호출된 XmlReader 클래스가 예외상황(exception)을 발생시킬 것임
+- Load와 Parse 메소드는 XmlREader가 던진 예외를 잡지 않음 
+- 대신에 예외는 무관심 속에 사용자가 사용하는 애플리케이션 코드에까지 전달됨 
+- 애플리케이션 코드에서 이를 잡아내어 새오항에 맞게 처리하게 됨
+- 다음 코드는 XML을 읽어들이고 해석할 시에, 지켜야 할 기본적인 코드 구조를 보여줌
+```C#
+try{
+    XElement xml = XElement.Parse("<bad xml>");
+}
+catch(System.Xml.XmlException e)
+{
+    //예외상황을 기록하기 
+}
+```
+- LINQ to XML 또한 내부에서 기존의 XmlREader 구조를 그대로 이용하여 XML 해석을 진행함
+- 그러므로 LINQ to XML 클래스는 XML을 해석하는 데 필요한 사소한 작업을 피하고, XML을 다루는 좀 더 직관적인 API를 제공하는 데 집중할 수 있게 됨
 
 ### 9.5.3. XML을 생성하기 
+- LINQ to XML은 XML 개체를 생성하는 함수형 생성이라는 매우 효율적이고 강력한 접근방법을 사용함
+- 함수형 생성은 단 하나의 문장으로 완전한 XML 트리를 생성할 수 있게 해줌
+- 밑의 XML을 어떻게 함수형 생성으로 만드는 지 알아보자
+```xml
+<books>
+    <book>
+        <author>Don Box</author>
+        <title>Essential.NET</title>
+    </book>
+</books>
+```
+- 이 XML을 만들기 위해 XElement의 생성자 가운데 중첩하여 XMLElement를 나타내는 XML 코드 조각들을 매개변수로 넣을 수 있는 생성자 이용 가능
+- [함수형 생성을 통해 XElement를 생성하기]
+```C#
+XElement books = new XElement("books",
+    new XElement("book",
+        new XElement("author", "Don Box"),
+        new XElement("title", "Essential .NET")
+    )
+);
+```
+- XML과 유사한 형태의 C# 코드 확인 가능
+- 다음 코드는 동일한 XML을 LINQ to XML이 제공하는 명령형 생성 모델을 이용하여 생성하는 것임
+- [LINQ to XML이 제공하는 명령형 생성 모델을 이용하여 생성된 XElement]
+```C#
+XElement book = new XElement("book");
+book.Add(new XElement("author", "Don Box"));
+book.Add(new XElement("title", "Essential .NET"));
+
+XElement books = new XElement("books");
+books.Add(book);
+```
+- 이 예시가 가독성도 별로고 많은 임시변수를 생성해야 하기 떄문에 예기치 않은 버그가 발생할 가능성도 높아짐
+- 함수형 생성이 훨씬 좋다(XML과 유사하고 가독성도 좋고 버그가 발생할 가능성도 낮으므로!)
+- 함수형 생성을 사용할 수 있도록 다음과 같은 세 개의 생성자가 XElement에 포함되어 있음
+```C#
+public XElement(XName name)
+public XElement(XName name, object content)
+public XElement(XName name, params object[] content)
+```
+- content 인수는 XElement를 제대로 상속한 객체라면 무엇이든지 올 수 있음 
+- 제대로 상속한 객체란 다음과 같은 것들을 의미함
+    - 문자열 형으로 추가되는 string 형이 있음 개체의 값으로 문자열을 저장하기 위해서는 string을 이용하는 것이 좋음<br>LINQ to XML은 내부적으로 그럴 경우 XText 노드를 생성할 것임
+    - XText는 string또는 CData 값을 가질 수 있으며 자식으로 등록이 됨. <br> 일반적으로는 CData 값을 갖는 것이 유리하며, 일반적인 문자열에 대해서는 string을 사용하면 됨
+    - XElement는 자식 개체로 추가됨
+    - XAttribute는 속성으로 추가됨
+    - XProcessingInstruction이나 XComment는 자식으로 추가됨
+    - IEnumerable은 재귀적으로 규칙을 적용하게 됨
+    - 이외의 다른 것들은 ToString() 메소드를 호출하면서 텍스트 형태로 저장하게 됨
+    - null은 무시됨
+- XElement를 생성하는 가장 간단한 방법은 XName을 매개변수로 받아들이는 생성자를 이용하는 것임
+- `XElement book = new XElement("book");`
+
+- LINQ to XML API의 사용성을 조금 더 높이기 위해 XName클래스는 string에서 자동으롭 변환되는 기능을 갖고 있음
+- 이것은 LINQ to XML이 "book"과 같은 문자열을 명시적으로 캐스팅하거나 새로운 XName 객체를 안 생성해도 자동으로 XName 객체로 변환해준다는 의미임
+- 이 기능 덕분에 개체의 이름("book")을 직접 XElement 생성자에 집어넣을 수 있음
+- 사용자가 신경쓸 필요 없이 LINQ to XML은 자동적으로 XName 객체로 문자열을 변환한 후 그 XName 객체를 이용하여 새로운 XElement객체를 생성해냄(알아서 해줌)
+
+- 텍스트 내용을 가진 리프 개체의 생성은 XElement 생성자의 두 번째 매개변수로 그 텍스트 내용을 전달하는 것만으로 간단히 해결 가능
+- `XElement name = new XElement("name", "Steve Eichert");`
+- 위 코드는 다음과 같은 XML을 생성함
+```XML
+<name>Steve Eichert</name>
+```
+- 문자열은 변수에 저장된 값이거나 변수에서 반환된 값일 수 있음
+```C#
+XElement name = new XElement("name", usersName);
+XElement name = new XElement("name", GetUsersName());
+```
+- 자식 노드를 가진 XML 개체를 생성하기 위해 XElement의 params 키워드를 매개변수로 받는 세 번쨰 생성자를 활용 가능
+- `public XElement(XName name, params object[] content)`
+- params 키워드는 가변 개수의 매개변수를 내용으로 전달 가능
+```xml
+<books>
+    <book>LINQ in Action</book>
+    <book>Ajax in Action</book>
+</books>
+```
+- 이같은 XML을 생성하기 위해서 다음과 같은 코드 이용 가능
+```C#
+XElement books = new XElement("books",
+    new XElement("book", "LINQ in Action"),
+    new XElement("book", "Ajax in Action")
+);
+```
+- 각각의 자식 노드는 그 자체로도 XElement이므로 코드를 확장하여 다음과 같은 완전한 XML 트리를 생성 가능
+- [LINQ to XML을 이용하여 XML 트리를 생성하기]
+```C#
+XElement books = new XElement("books",
+    new XElement("book",
+        new XElement("title", "LINQ in Action"),
+        new XElement("authors",
+            new XElement("author", "Fabrice Marguerie"),
+            new XElement("author", "Steve Eichert"),
+            new XElement("author", "Jim Wooley")
+    ),
+    new XElement("book",
+        new XElement("title", "Ajax in Action"),
+        new XElement("authors",
+            new XElement("author", "Dave Crane"),
+            new XElement("author", "Eric PAscarello"),
+            new XElement("author", "Darren James")
+        ),
+        new XElement("publicationDate", "October 2005")
+    )
+);
+```
+- 네임스페이스를 가진 개체를 생성하기 위해 완전한 전체 XML 이름을 XElement 생성자의 첫 번째 매개변수로 넘겨주거나 XNamespace 객체를 생성하여 로컬 이름을 뒤에 붙여 XElement를 생성하는 방법이 있음
+- 다음 코드는 완전한 XML 이름을 이용하거나 XNamespace를 활용하여 XElement를 생성하는 두 가지 방법을 보여줌
+- [완전한 XML 이름과 XNamespace를 이용하여 XElement를 생성하기]
+```C#
+XElement book = new XElement("{http://linqinaction.net}book");
+//완전하게 표현된 XName을 가진 XElement를 생성함
+
+XNamespace ns = "http://linqinaction.net";
+XElement book = new XElement(ns +"book");
+//XNamespace와 로컬 이름만으로 생성함
+```
+- 만약 네임스페이스를 이용하는 하나의 개체를 생성하는 거라면, 완전한 이름을 전달하는 방식을 사용할 것임
+- 네임스페이스를 공유하는 여러 개의 개체의 생성을 원한다면, XNamespace를 한 번 정의-> 그것을 공유하는 개체가 공통으로 사용한다면 코드는 더욱 간결해질 것
+- [모두 XNamespace를 사용하는 몇 가지 개체를 만들기]
+```C#
+XNamespace ns = "http://linqinAction.net";
+XElement book = new XElement(ns+"book",
+    new XElement(ns + "title", "LINQ in Action"),
+    new XElement(ns + "author", "Fabrice Marguerie"),
+    new XElement(ns + "author", "Steve Eichert"),
+    new XElement(ns + "author", "Jim Wooley"),
+    new XElement(ns + "publisher", "Manning")
+);
+```
+- [위 코드의 결과]
+```xml
+<book xmlns="http://linqinaction.net">
+    <title>LINQ in Action</title>
+    <author>Fabrice Marguerie</author>
+    <author>Steve Eichert</author>
+    <author>Jim Wooley</author>
+    <publisher>Manning</publisher>
+</book>
+```
+- XML에 네임스페이스 접두사를 추가하고 싶다면 XML 네임스페이스에 명시적으로 접두사를 연관짓도록 코드를 변경해야 함
 
 ### 9.5.4. Visual Basic의 XML 리터럴을 이용하여 해석하기
 
