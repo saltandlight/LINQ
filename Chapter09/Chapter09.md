@@ -1,4 +1,4 @@
-# Chapter09. LINQ to XML의 소개
+# Chapter09. LINQ to XML의 소개🐳
 - LINQ to XML은 LINQ가 제공하는 강력한 질의기능을 XML 데이터에 대해서도 사용 가능하게 함
 - 개발자들에게 새로운 XML 프로그래밍 API를 제공해줌
 - LINQ to XML API를 잘 다루려면 LINQ to XML이 설계당시에 어떤 목적과 사상에 바탕을 두고 있었는지 자세히 알아볼 필요가 있음
@@ -65,7 +65,7 @@
     <author>Jim Wooley</author>
     <publisher>Manning</publisher>
 </books>
-``` 
+```
 - 이 문서를 위해 작성해야 하는 코드는 다음과 같음
 - [DOM을 이용하여 XML 문서 만들기]
 ```C#
@@ -127,17 +127,237 @@ new XElement("books",
 - XML 선언, 문서형태 정의, XML 처리법 정의 등을 포함하는 완전한 형태의 XML 문서를 작성하는 경우에 대비해서 LINQ to XML은 XDocument라는 클래스를 지원하고 있음
 
 ### 9.3.3. 핵심개념: 간소화된 명명법
+- XML에서 가장 골치아픈 부분: XML 이름, XML 네임스페이스 및 네임스페이스 접두사
+- DOM을 이용하여 개체 생성 시 개발자들은 개체의 전체 이름을 포함하는 오버로드된 몇몇의 factory method를 작성해야 함
+    - factory method pattern: 객체를 만들어내는 부분을 서브 클래스에 위임하는 패턴
+- DOM이 어떻게 이름, 네임스페이스, 접두사를 어떻게 알아챘는가의 문제는 API를 필요 이상으로 복잡하게 만듦
+
+- LINQ to XML내에서는 XML 이름이 매우 간소화되어 있음
+- 로컬 이름, 제한 이름, 네임스페이스, 네임스페이스 접두사에 대해 고민하고 추적하는 대신 단 하나의 전체 일므에만 집중 가능함
+- XName 클래스는 객체의 네임스페이스, 로컬 이름을 포함하는 하나의 완전한 전체 이름을 나타냄
+- XName에 네임스페이스가 포함된 경우 다음과 같은 형태를 가짐
+- `{http://schemas.xyxcorp.com/}localname`
+
+- 네임스페이스를 사용하는 개체들을 생성하는 과정이 간소화된 것 이외에도 LINQ to XML은 네임스페이스를 사용하는 개체들이 포함된 XML 트리구조에 대한 질의를 더 쉽게 해줌
+- [XML 네임스페이스를 이용하는 RSS 패드]
+```xml
+<?xml-stylesheet href=http://iqueryable.com/friendly-rss.xsl type="text/xsl" media="screen"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/"
+xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+xmlns:wfw="http://wellformedweb.org/CommentAPI/">
+  <channel>
+    <title>Steve Eichert</title>
+    <link>http://iqueryable.com/</link>
+    <generator>ActiveType CMS v0.1</generator>
+    <dc:language>en-US</dc:language>
+    <description />
+    <item>
+        <dc:creator>Steve Eichert</dc:creator>
+        <title>PArsing WordML using LINQ to XML</title>
+        <link>http://iqueryable.com/LINQ/ParsingWordMLusingLINQ to XML</link>
+        <pubDate>Web, 02 Aug 2006 15L52L44 GMT</pubDate>
+        <guid>http://iqueryable.com/LINQ/ParsingWordMLusingLINQ to XML</guid>
+        <comments>
+            http://iqueryable.com/LINQ/ParsingWordMLusingLINQ to XML#comments
+        </comments>
+        <wfw:commentRss>
+            http://iqueryable.com/LINQ/ParsingWordMLusingLINQ to XML/commentRss.aspx
+        </wfw:commentRss>
+        <slash:comments>1</slash:comments>
+        <description>Foo.....</description>
+    </item>
+  </channel>
+</rss>
+```
+- RSS 피드가 몇몇 XML 네임스페이스를 이용하고 있음
+- 다음 예제는 방금 거론한 네임스페이스에 네임스페이스 접두사를 이용하는 경우 어떻게 DOM을 통해 값을 추출할 수 있는지 보여줌
+- [DOM을 통해 네임스페이스를 가진 XML을 다루는 방법]
+```C#
+XmlDocument doc = new XmlDocument();
+doc.Load("http://iqueryable.com/rss.aspx");
+
+XmlNamespaceManager ns = new XmlNamespaceManager(doc.NameTable);
+ns.AddNamespace("dc", "http://purl.org/dc/elements/1.1/");
+ns.AddNamespace("slash", "http://purl.org/rss/1.0/modules/slash/");
+ns.AddNamespace("wfw", "http://wellformedweb.org/CommentAPI/");
+
+XmlNodeList commentNodes = doc.SelectNodes("//slash:comments", ns);
+foreach(XmlNode node in commentNodes){
+    Console.WriteLine(node.InnerText);
+}
+```
+- DOM을 이용하여 RSS 피드에 대해 질의할 때는 XMLNamespaceManager를 하나 생성, 문서에 대한 검색을 수행시마다 이를 사용해야 함
+- 이런 검색은 접두사가 있는 경우에는 수행하지 않으므로 저두사가 있는 경우에는 XMLNamespaceManager를 제거해줘야 함
+```C#
+XmlNodeList titleNodes = doc.SelectNodes("/rss/channel/item/title");
+foreach(XmlNOde node in titleNodes){
+    Console.WriteLine(node.InnerText);
+}
+```
+- 무엇을 질의하는지에 따라 살짝 차이가 있는 API 용법들을 갖게 됨
+- 네임스페이스관리를 어떤 경우에 사용하고 어떤 경우에 사용하지 않는지 기억해둬야 함
+- LINQ to XML은 네임스페이스를 다루는 좀 더 자연스러운 방법을 제시해줌
+- XMLNamespaceManager를 사용하면서 언제 사용해야 할 지 기억하기보다 다음과 같은 간단한 규칙을 기억하자
+
+- "개체나 속성과 작업 시에는 항상 완전한 형태으 이름을 가지고 작업하자."
+
+- 만약 다루려는 객체가 네임스페이스를 이용하고 있다면 XName 객체를 만들 떄 명시해주는 것이 좋음
+- 다음 코드는 예시 XML에 질의하는 LINQ to XML 코드를 보여줌
+- [LINQ to XML을 이용하여 네임스페이스를 가진 XML에 대해 질의하는 방법]
+```C#
+XElement rss = XElement.Load("http://iqueryable.com/rss.aspx");
+XNamespace dc = "http://purl.org/dc/elements/1.1/";
+XNamespace slash = "http://purl.org/rss/1.0/modules/slash/";
+XNamespace wfw = "http://wellformedweb.org/CommentAPI/";
+
+IEnumerable<XElement> comments = rss.Descendants(slash + "comments");
+//XNamespace와 XName을 이용하는 완전하게 확장된 질의
+foreach(XElement comment in comments){
+    Console.WriteLine((int)comment);
+}
+
+IEnumerable<XElement> titles = rss.Descendents("title");
+//로컬 이름만을 이용한 질의
+foreach(XElement title in titles){
+    Console.WriteLine((string)title);s
+}
+```
+- LINQ to XML이 네임스페이스를 다루는 방법은 매우 간결하고 직관적
+- 네임스페이스와 로컬 이름을 하나의 개념으로 결합하는 형태로 LINQ to XML은 네임스페이스나 네임스페이스 접두사를 이용하는 XML 문서들을 더욱 쉽게 다룰 수 있게 해줌
+- 모든 것은 하나의 개념을 바탕으로 XNAme이라는 하나의 클래스에 통합되어 표현됨
 
 ## 9.4. LINQ to XML 클래스 계층구조
+- LINQ to XML 프로그래밍 API를 이용하여 XML을 읽기, 생성하기, 수정하기라는 바어븡ㄹ 알아보기 전에 앞을 사용하게 될주요 클래스들에 대한 이해가 선행되어야함
+- 다행히 LINQ to XML은 비교적 간단한 계층구조와 일상적으로 사용하게 될 몇 안 되는 클래스들을 갖고 있음
+  ![](cap1.PNG)
+- LINQ to XML은 프로그래머들이 XML을 좀 더 생산적이고 직관적으로 사용가능하도록 설계된 매우 작고 간단한 API임
 
+- XObject 클래스는 LINQ to XML 내의 대부분의 클래스들의 기본 클래스가 됨
+- XObject 클래스는 줄번호 같은, 사용자가 정의한 주석형태의 정보를 저장하는 AddAnnotation이라는 메소드를 포함함
+- 주석이 더 이상 필요 없을 경우에 이를 삭제하는 RemoveAnnotation이라는 메소드도 포함함
+- 이런 주석들을 읽어들이기 위해 XObject 클래스는 Annotation, Annotation<T>, Annotations, Annotations<T>axis 메소드 등을 제공하고 있음
+- 클래스 구조도 상에서 XObject 바로 아래에 있는 것은 XNode 추상 클래스임.
+- Xnode는 개체 노드를 표현하는 모든 LINQ to XML 클래스들의 기본 클래스가 됨
+- XNode 클래스는 명령형 스타일의 AddAfterSElf, AddBeforeSelf, Remove와 같은 통상적인 업데이트 메소드들과 Ancesotrs, ElementsAfterSelf, ElementsBeforeSelf, NodesAfterSelf, NodesBeforeSelf와 같은 축 메소드(axis method)들을 제공함
+- 클래스 구조도 상에서 XContainer는 XNode 바로 밑에 있음
+
+- XContainer는 다른 XNodeobject를 포함하는 모든 XNodeobject들의 추상 기본 클래스가 됨
+- XContainer들에는 Add, AddFirst, RemoveNodes, ReplaceNodes와 같은 명령형 업데이트 메소드들이 추가되어 있음
+- Nodes, Descendants, Element, Elements와 같은 축 메소드들이 있음
+- XContainer는 LINQ to XML 계층구조 안에서 XElement와 XDocument라는 가장 중요한 클래스들의 기본 클래스임
+
+- XElement는 클래스 계층구조상 가장 낮은 곳에 위치한 것처럼 보이지만!!, LINQ to XML에서 가장 기본이 되는 클래스임
+- XElement는 다른 개체를 자식으로 갖는 XML 개체 노드를 나타냄
+- Attributes, AncestorsAndSelf, DescendantAndSelf와 같은 축 메소드와 RemoveAll, RemoveAttributes, SetElementValue, SetAttributeValue와 같은 명령형 업데이트 메소드를 포함함
+- LINQ to XML의 중요한 기반 클래스로서 XElement는 외부의 데이터를 바타으로 XML을 읽어들이는 Load 메소드 및 XML 문자열에서 Xelement를 생성해내는 Parse, 디스크로 나타나는 XML 트리구조를 저장하는 Save, XmlWriter를 이용할 수 있게 해주는 WriteTo 등의 정적 메소드를 제공함
+- 다른 XNode 객체들을 포함할 수 있는 특성 외에도 XElement는 속성들을 정의할 수 있는 기능을 갖고 있음
+
+- XAttribute 클래스는 LINQ to XML 내의 속성들을 포함함
+- XAttribute는 XNode를 상속받지 않음
+- XAttribute 객체는 XElement 객체와 연관된 이름/값 쌍들임
+- XAttribute 클래스는 Parent라는 축 프로퍼티를 제공하며 명령형의 Remove라는 메소드도 제공함
+- LINQ to XML에서 XML 문서계층이 가지는 역할은 상당히 축소되었지만 아직 종종 필요할 때가 있음
+- 이런 필요성에 의해 LINQ to XML은 XDocument라는 클래스를 제공하고 있음
+- XDocument 클래스는 하나의 완전한 XML 문서를 나타냄
+- XElement라는 클래스와 마찬가지로 이것은 외부의 내용을 불러들여 XML 문서를 생성하는 Load와 XML 문서를 XML 문자열에서 생성해주는 Parse라는 정적 메소드를 가지고 있음
+
+- 유사하게, Save와 WriteTo라는 메소드를 통해 저장 가능
+- XElement와 XDocument의 근본적인 차이: XDocument는 하나의 루트 XElement를 가지고 있고, 다음과 같은 사항들을 가지고 있을 수 있다는 점
+    - 하나의 XML 정의
+    - 하나의 XML 문서형태
+    - XML 처리방법
+- LINQ to XML의 주요 개념 중 하나는 XML 이름의 간소화
+- 이런 간소화를 도와주는 두 클래스: XName과 XNamespace임
+- XName은 완전한 XElement나 XAttribute의 이름을 나타냄
+- 완전한 이름은 {name-space}localname과 같은 문자열의 형태로 나타남
+- XNamespace 클래스는 XName의 namespace 부분을 나타내고 XName의 Namespace 프로퍼티를 통해 읽어들일 수 있음
+- XName과 XNamespace 클래스는 XML 이름 형태로 된 문자열을 자동적으로 XName과 XNamespace로 변환가능하도록 외부에 드러나지 않게 연산자를 오버로드하고 있음
+- 이런 드러나지 않는 변환과정에 의해 XElement나 XAttribute 객체를 생성 시 XName과 XNamespace 객체 대신에 문자열을 이용 가능하게 됨
+- [추가적인 LINQ to XML 클래스] 
+
+    | 클래스                 | 설명                                                         |
+    | ---------------------- | ------------------------------------------------------------ |
+    | XDeclaration           | XML 선언을 나타내며 XML 선언이란 XML 버전과 인코딩, XML 문서가 독립적으로 사용 가능한 지 여부를 포함하는 정보 |
+    | XComment               | XML 문서를 나타냄                                            |
+    | XDocumentType          | XML DTD를 나타냄                                             |
+    | XProcessingInstruction | XML을 처리하는 애플리케이션에게 정보를 전달하는 XML 처리과정을 나타냄 |
+    | XStreamingElement      | 개체들이 입력과 출력으로 흐를 수 있게 해줌                   |
+    | XText and XCData       | LINQ to XML 텍스트 노드는 CData 섹션을 생성하거나 혼합된 컨텐츠와 동작시킬 때 필요함 |
+
+- API에 포함된 클래스의 개수를 보면 일상적인 XML 프로그래밍 작업을 위해 친숙해야 할 클래스가 얼마나 적은지 보면 LINQ to XML의 간결함을 체감가능
 ## 9.5. LINQ를 이용하여 XML을 다루기
+- LINQ to XML API는 개발자들에게 XML을 읽고(Read), 해석하고(Parse), 생성하고(Create) , 조작하는(Manipulate) 메모리 내의 프로그래밍 인터페이스들을 제공함
+- LINQ to XML API를 이용하면서 XML 데이터를 중요하게 활용하는 애프리케이션 제작 속도가 매우 빨라짐~~~
+
 ### 9.5.1 XML을 읽어들이기
+- LINQ to XML은 XML을 파일, URL, XmlReader 등 여러 가지 입력을 통해 받아올 수 있게 해줌
+- XML을 끌어들이기 위해서 XElement의 정적 메소드 Load가 이용됨
+- XML 파일을 하드디스크의 파일에서 읽어들여 XElement 객체를 생성하기 위해서는 다음같은 C# 코드 이용 가능
+`XElement x = XElement.Load(@"c:\books.xml);`
+- 웹 사이트에서 XML을 읽어들이는 것도 Load 메소드에서 지원됨.
+`XElement x = XElement.Laod("http://msdn.microsoft.com/rss.xml");`
+- 기본적으로 XML이 XDocument나 XElement에 올라오면 문서 내의 공백문자는 모두 제거됨
+- 원본 문서의 공백문자를 모두 보존하고 싶다면 Load 메소드를 오버로드해서 None, reserveWhitespace, SetBaseUri, SetLineInfo 등의 부가적인 옵션을 지정해주는 LoadOption이라는 플래그를 받아들이도록 할 수 있음
+
+- 이번에는 MSDN의 RSS 피드를 다시 읽어들이되 LoadOptions.PreserveWhitespace 플래그를 설정해서 공백문자를 보존하는 코드를 작성해보자
+```C#
+string xmlUrl = "http://msdn.microsoft.com/rss.xml";
+XElement x = XElement.Load(xmlUrl, LoadOptions.PreserveWhitespace);
+``` 
+- XML을 파일이나 URL에서 읽어들일 떄 LINQ to XML은 XmlReader 클래스를 이용함
+- XmlReader는 먼저 Load 메소드에서 요청한 XML을 파일 시스템에서 읽어들이거나 제시된 URL에서 받아오게 됨
+- 파일이 다 받아지면 XmlReader는 파일 내의 XML을 읽어들여 메모리 내의 LINQ to XML 객체 트리를 형성하게 됨
+- XElement가 내부적으로 XmlReader를 이용하여 XML 문서를 읽어들인다는 점을 감안하면 LINQ to XMl이 이미 존재하는 XmlReader에서 XML 데이터를 받아올 수 있다는 것도 놀라운 일은 아님
+- XML을 XmlReader에서 받아오기 위해 먼저 XmlReader를 개체 노드에 배치시켜야 함
+
+- 다음 예제에서는 books.XML 파일을 정적 메소드 Create를 이용하여 XmlReader 속으로 불러들임
+- 그런 뒤 XmlNodeType.Element라는 NodeType을 가진 개체를 발견할 때까지 노드를 하나씩 읽어봄
+- 예제의 XmlReader가 개체 노드에 배치되면 XmlREader를 매개변수로 받아들이는 ReadFrom이라는 정적 메소드를 이용하여 기존의 XmlReader 인스턴스에서 XElement를 생성가능함
+- [XElement를 기존의 XmlReader 문서에서 읽어 생성하기]
+```C#
+using(XmlReader reader = XmlReader.Create("books.xml")){
+    while(reader.Read()){
+        if(reader.NodeType == XmlNodeType.Element)
+            break;
+    }
+    XElement booksXml = (XElement) XNode.ReadFrom(reader);
+}
+```
+- 만약 XmlReader에 포함된 자은 조각에서 XElement 객체를 생성하고 싶다면 XmlReader API를 이용하여 해당 노드까지 찾아들어간 다음 XmlREAder를 ReadFrom 메소드에 넘겨주어야 함
+- books.XML 파일에서 첫 번째 책 개체를 읽어들이려면 다음과 같이 할 수 있음
+```C#
+using(XmlReader reader = XmlTextReader.Create("books.xml")){
+    while(reader.Read())
+    {
+        if(reader.NodeType == XmlNodeType.Element && reader.Name == "book")
+            break;
+    }
+    XElement booksXml = (XElement) XNode.ReadFrom(reader);
+}
+```
+- 객체에 XML을 읽어들이기 위하ㅐ서는 지금까지 설명한 방법을 그대로 이용 가능함
+- 만약 XML 정의, 최고수준의 XML 처리 명령,XML 문서형태 정의, XML 주석 등에 접근하는데 관심 있었다면 XElement가 아니라 XDocument로 XML을 읽어들여야 할 것임
+- XDocument의 Load 메소드는 Xelemnt의 Load 메소드와 동일하게 이용 가능, 기본적으로 동일한 동작을 함
+- 유일한 차이점: XDocument가 좀 더 많은 종류의 자식 노드를 가질 수 있음
+- 다음과 같이 읽어올 수 있음
+`XDocument msdnDoc = XDocument.Load(""http://www.micorosoft.com/rss.xml);`
+- XML을 파일, URL, XmlReader 객체와 같은 외부 출처에서 불러오는 방법 훑어봄
+
 ### 9.5.2. XML을 해석하기
+
+
 ### 9.5.3. XML을 생성하기 
+
 ### 9.5.4. Visual Basic의 XML 리터럴을 이용하여 해석하기
+
 ### 9.5.5. XML 문서를 생성하기 
+
 ### 9.5.6. XML에 내용을 추가하기
+
 ### 9.5.7. XML에서 내용을 삭제하기
+
 ### 9.5.8. XML의 내용을 수정하기
+
 ### 9.5.9. 속성을 가지고 작업하기
+
 ### 9.5.10. XML을 저장하기
