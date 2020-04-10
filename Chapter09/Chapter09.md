@@ -524,17 +524,261 @@ XElement book = new XElement(ns+"book",
 </book>
 ```
 - XML에 네임스페이스 접두사를 추가하고 싶다면 XML 네임스페이스에 명시적으로 접두사를 연관짓도록 코드를 변경해야 함
+- 접두사를 네임스페이스와 연관시키려면, XAttribute 객체를 접두사를 필요로 하는 개체에 추가, 그 접두사를 XNamespace.Xmlns 네임스페이스에 추가 가능
+- [접두사를 네임스페이스와 연관짓기]
+```C#
+XNamespace ns = "http://linqinaction.net";
+XElement book = new XElement(ns+"book",
+    new XAttribute(XNamespace.Xmlns +"1",ns)
+);
+```
+- 결과 XML은 다음과 같을 것임
+- `<l:book xmlns:l="http://linqinaction.net"/>`
+- 지금까지는 주로 개체를 초함하는 XML을 생성하는 것에 주안점을 두었음
+- XML을 실제 현없에서 생성할 떄 우리가 생각하는 XML에 속성, 처리방법, XML DTD, 주석 등이 포함 가능
 
-### 9.5.4. Visual Basic의 XML 리터럴을 이용하여 해석하기
+- 이런 것들이 우리의 XML에 추가할 때에는 함수형 생성문의 적절한 위치에 넘겨주는 방법을 사용함
+- book 개체에 속성을 추가하기 위해 새로운 XAttribute 개체를 생성하여 XElement의 내용 매개변수에 집어넣음
+- [속성을 가진 XML을 생성하기]
+```C#
+XElement book = new XElement("book",
+    new XAttribute("publicationDate", "October 2005"),
+    new XElement("title", "Ajax in Actoin")
+);
+```
+- 이 절에서는 특히 함수형 생성과 LINQ to XML API를 이용하여 XML을 생성하는 데 주안점을 두었음
 
 ### 9.5.5. XML 문서를 생성하기 
+- 지금까지 개체에 대해서 설명하면서 거론했던 모든 메소드들이 XDocument에도 그대로 적용됨
+- 개체와 XDocument간의 가장 큰 차이는 허용되는 내용으 차이일 뿐
+- XElement 객체를 다룰 때에는, XElement, XAttribute, XText, IEnumerable, string 등이 내용으로 사용될 수 있도록 허용하고 있음
+- XDocument는 다음과 같은 사항들이 자식 내용으로 사용되는 것을 허용하고 있음
+    - DTD를 위한 하나의 XDocumentType 객체
+    - XML 선언에서 꼭 필요한 부분들만 저장해둘 수 있도록 하는 하나의 XDeclaration 객체<br>
+      XDeclaration 객체에는 XML 버전, 문서의 인코딩, XML 문서의 독립성 여부가 저장됨
+    - 하나 또는 그 이상의 XProcessingInstruction 객체. 처리방법은 XML을 처리하는 애플리케이션에게 정보를 전달해줌
+    - XML 문서의 최상위 노드가 되는 하나의 XElement 객체
+    - 최상위 노드의 형제가 되는 하나 또는 그 이상의 XComment 객체. 하지만 XComment 객체는 목록의 첫 번째 매개변수가 될 수 없음 왜냐하면 XML 문서는 주석으로 시작할 수 없기 때문임.
+- XDocument를 이용하는 대부분의 상황에서 XML 문서들은 예제 코드처럼 함수형 생성 패턴을 따라 생성될 것
+- [XDocument 클래스와 함수형 생성법을 이용하여 생성한 XML 문서]
+```C#
+XDocument doc = new XDocument(
+    new XDeclaration("1.0", "utf-8", "yes"),
+    new XProcessingInstruction("XML-stylesheet", "friendly=rss.xsl"),
+    new XElement("rss",
+        new XElement("channel", "my channel")
+    )
+);
+```
+
+#### XDeclaration
+- XDeclaration 클래스는 XML 선언을 나타냄
+- XML 선언은 문서의 버전과 인코딩에 관한 정보를 나타내고 문서가 독립적인지를 나타내는 요소
+- 이런 이유로 XDeclaration은 다음과 같은 생성자를 가지고 있음
+- `public XDeclaration(string version, string encoding, string standalone)`
+- XDeclaration 클래스는 이미 존재하는 XDeclaration 객체나 XmlReader를 통해 생성 가능
+- XmlReader가 생성자에게 전달되었을 때 XmlReader를 통해 XML 정의가 XDeclaration 생성자에게 전달됨
+- XML 정의를 XmlReader에서 읽어들이기 위해 XmlREader의 위치가 XML 정의 부분에 정확히 있어야 함
+- 만약 위치가 정확하지 않다면 InvalidOperationException이 발생함
+
+#### XProcessingInstruction
+- XML 문서를 가지고 작업하기 씨작할 떄 중요하게 다루는 두 번쨰 클래스임
+- XProcessingInstruction 클래스는 XML을 처리하는 명령어들을 나타냄
+- 처리 명령어들은 정보를 XML을 처리하는 애플리케이션에게 전달
+- XDeclaration 클래스오 같이 XProcessingInstruction 클래스는 기존의 XmlReader 인스턴스에서 생성될 수 있음
+- `public XProcessingInstruction(string target, string data)`
+- XML 처리 명령어의 가장 대표적인 용도는 XML 문서를 표시하기 위해 어떤 XSLT 스타일시트를 사용하는 지 지정하는 것
+- [XML 스타일시트 처리방법을 이용하여 생성한 XML 문서]
+```C#
+XDocument d = new XDocument(
+    new XProcessingInstruction("XML-stylesheet",
+        "href='http://iqueryable.com/friendly-rss.xsl' type='text/csl' media='screen'");
+    new XElement("rss", new XAttribute("version", "2.0"),
+    new XElement("channel",
+      new XElement("item", "my item")
+      )
+    )
+);
+```
+#### XDocumentType
+- XDocumentType 클래스는 XML 문서의 형식 정의를 표현함
+- XML을 작성할 떄에는 DTD를 정의하여 어떤 개체들이 존재하는지, 개체 간의 관계는 어떠한지 등 문서에 대한 각종 규칙을 정의함
+- 다른 모든 클래스들과 마찬가지로 XDocumentType은 XmlReader를 매개변수로 하는 하나의 생성자와 XmlReader 없이 자유롭게 생성될 수 있는 또 다른 생성자를 제공함
+- 후자에 해당하는 생성자에 대한 정의는 다음과 같음
+```xml
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <body>This is the body!</body>
+</html>
+```
+- 이 HTML을 작성하기 위해서 XDocumentType과 XElement를 예제코드에서와 같이 넘겨주었으며 함수형 생성을 이용함
+- [XDocumentType 클래스를 이용하여 생성한 HTML 문서]
+```C#
+XDocument html = new XDocument(
+    new XDocumentType("HTML", "-//W3C//DTD HTML 4.01//EN",
+                              "http://www.w3.org/TR/html3/strict.dtd", null),
+    new XElement("html",
+        new XElement("body", "This is the body!")
+    )
+);
+```
+
+#### XComment
+- XML 문서에도 어떤 내용이 문서에 포함되어 있는지 설명하기 위해 XML 주석을 추가 가능
+- XML에서의 주석은 문자열에서 생성해내거나 XmlReader가 읽고 있는 위치의 Xml 주석을 읽음 -> 생성 가능
+- XComment 클래스는 반드시 XDocument 클래스의 내부에서만으로 그 사용이 제한되지는 않음
 
 ### 9.5.6. XML에 내용을 추가하기
+- LINQ to XML은 XML을 조작하기 위한 메소드를 왕창 제공하고 있음
+- 어떻게 새로운 개체와 속성을 XElement에 삽입할 수 있는지 알아보자
 
+- XElement를 불러들이거나 생성한 후에 개체에 추가의 자식들을 넣기 원할 수 있음
+- Add 메소드는 기존의 XElement에 내용을 추가시켜 줌
+- 이 메소드는 두 개의 오버로딩된 형태를제공, 첫 번쨰 형태는 하나의 객체를 매개변수로 받고, 두 번쨰는 가변 개수의 아이템을 내용으로 추가할 수 있게 해줌
+```C#
+public void Add(object content)
+public void Add(params object[] content)
+```
+- Add의 이러한 두 가지 오버로딩된 형태에 의해 앞에서 말한 함수형 생성 패턴으로 내용 추가가 가능해짐
+- 기존의 XElement에 단일 개체를 삽입하기 위해 다음의 코드 이용 가능
+```C#
+XElement book = new XElement("book");
+book.Add(new XElement("author", "Dr.Seuss"));
+```
+- 물론 XElement의 자식이 될 수 있는 것이라면 무엇이든지 매개변수의 내용 부분에 들어갈 수 있음 
+- XElement의 Add 메소드에 XAttribute를 매개변수로 전달하는 방법으로 개체에 속성 추가 가능함
+- [XElement에 Add 메소드를 이용하여 내용을 추가하기]
+```C#
+XElement books = new XElement("books");
+books.Add(new XElement("book",
+    new XAttribute("publicationDate", "May 2006"),
+    new XElement("author", "Chris Sells"),
+    new XElement("title", "Windows Forms Programming")
+    )
+);
+```
+- Add 메소드가 IEnumerable을 구현하는 내용을 제대로 다룰 수 있다는 점도 매우 중요함
+- IEnumerable 을 구현하는 내용이 Add 메소드에 전달되면 각각의 아이템은 재귀적으로 XElement에 추가됨 
+- 모든 XML 질의 축 메소드를 포함한 표준 질의 연산자들이 IEnumerable<XElement>를 반환하므로 LINQ 질의가 XML을 작성하는 데 사용될 수 있도록 함
+```C#
+XElement existingBooks = XElement.Load("existingBooks.xml");
+XElement books = new XElement("books");
+books.Add(existingBooks.Elements("book"));
+```
+- 기본적으로 XElement에 어떤 아이템이 추가되었을 때, 개체의 마지막 자식으로 추가되게 됨
+- 만약 추가되는 자식이 XElement 형식이라면 해당 개체는 마지막 자식 개체로 등록되고, 만약 내용이 XAttribute라면 그 속성은 개체의 마지막 속성으로 등록됨
+- XElement 는 몇몇 다른 메소드를 제공함
+- 자식을 맨 앞에 추가하기 위해서는 AddFirst라는 메소드를 사용 가능
+- 만약 정확히 어떤 위치에 개체를 넣고 싶은지 알 수 없다면 어떤 개체의 위치로 이동한 다음 AddAfterSelf 또는 AddBeforeSelf와 같은 메소드 호출 가능
+- book 개체를 books XElement에 두 번째 자식으로 추가하려면 다음과 같이 하면 됨
+```C#
+XElement newBook = new XElement("book", "LINQ in Action");
+XElement firstBook = books.Element("book");
+firstBook.AddAfterSelf(newBook);
+```
+- AddFirst, AddAfterSelf, AddBeforeSelf 메소드는 모두 Add오 ㅏ같이 두 가지 오버로딩된 형태를 제공, 동일한 방식으로 매개변수를 받아들임
 ### 9.5.7. XML에서 내용을 삭제하기
+- XElement는 자식 내용을 제거하는 몇몇 메소드를 제공함
+- 가장 직관적이고 당연한 방법은 지우고 싶은 항목 탐색 -> Remove 메소드 호출
+- Remove는 단일 객체 또는 IEnumerable을 구현하는 객체에 대해 모두 동작
+- IEnumerable을 대상으로 호출할 경우, 그 IEnumerable이 포함하고 있는 개체들을 단 한 번의 호출로 모조리~! 지워버릴 수 있음
+- 다음 코드에서는 단일 개체를 지우는 방법과 IEnumerable에 속한 여러 개의 개체를 삭제하는 방법을 보여줌
+- [Remove 메소드를 사용하여 XElement에서 하나 이상의 개체를 삭제하기]
+```C#
+books.Element("book").Remove();     //첫 번쨰 책을 삭제
+books.Elements("book").Remove();    //모든 책을 삭제
+```
+- XElement와 SetElementValue 메소드는 개체를 삭제하는 데 사용 가능
+- SetElementValue를 이용하여 객체를 삭제하려면 매개변수에 null을 넣으면 됨
+`books.SetElementValue("book", null);`
+- 개체는 그대로 두면서 내용만 삭제할 칠요가 있는 경우 Value 프로퍼티 이용 가능
+`books.Element("book").Element("author").Value=String.Empty;`
+- 다음과 같은 XML을 결과로 얻을 수 있음
+```xml
+<books>
+    <book>
+        <author></author>
+    </book>
+</books>
+```
 
 ### 9.5.8. XML의 내용을 수정하기
+- LINQ to XML은 XML을 업데이트하는 몇 가지 방법을 제공함
+- 가장 직접적인 방법: XElement에 정의된 SetElementValue 메소드를 이용하는 것
+- SetElementVAlue는 자식 개체의 간단한 내용을 바꿀 수 있게 해줌
+- 이 책의 저자인 Steve Eichert의 이름을 바꿔보자
+- XML은 다음과 같다.
+```XML
+<books>
+    <book>
+        <title>LINQ in Action</title>
+        <author>Steve Eichert</author>
+    </book>
+</books>
+```
+- <author/> 개체를 업데이트하기 위해 먼저 Element 축 메소드를 이용 -> 첫 번째 개체를 탐색함
+- <book />개체에 도달하는 순간, SetElementValue를 호출하며 업데이트하려는 개체의 이름(author)과 할당할 새로운 값을 전달함
+```C#
+XElement books = new XElement("books.xml");
+books.Element("book").SetElementValue("author", "Bill Gates");
+```
+- SetElementValue를 호출하고 나면 author 개체의 값이 Bill Gates로 업데이트 되어 있을 것임
+- 중요한 것:**SetElementValue가 매우 간단한 내용만을 업데이트하는 것을 지원한다는 것**
+- 만약 조금 더 복잡한 내용을 전달하려고 하면 SetElementValue는 그 내용을 XContainer의 GetStringValue 메소드를 이용해서 문자열로 변환하려고 할 것임
+- `books.Element("book").SetElementValue("author", new XElement("foo"));`
+- XElement를 string 대신 author 개체의 값으로 전달하려고 하면 XContainer가 발생시키는 예외상황에 접하게 될 것임
+- 이유: XObject를 상속받는 어떤 개체도 내용으로 이용될 수 없게 하기 때문임
+
+- 좀 더 복잡한 내용을 다루려면 XContainer에 정의된 ReplaceNodes 메소드가 사용되어야 함
+- ReplaceNodes는 매우 다양한 종류의 컨텐츠를 전달할 수 있도록 지원함
+- 일정하지 않은 개수의 내용을 전달할 수 있게 해줌
+- 예제 코드에서 SetElementValue가 아닌 ReplaceNodes를 이용한다면 원하는 결과를 제공해주는 다음과 같은 코드를 작성할 수 있음
+- `books.Element("book").Element("author").ReplaceNodes(new XElement("foo"));`
+- 위 코드는 다음과 같은 결과를 가져옴
+```xml
+<books>
+    <book>
+        <title>LINQ in Action</title>
+        <author>
+            <foo/>
+        </author>
+    </book>
+</books>
+```
+- XElement에 ReplaceNodes를 호출 -> 기존의 모든 내용 삭제, 내용 매개변수들이 ReplaceNodes에 전달되게 됨
+- 내용 매개변수들은 XElement의 적절한 자식 개체이거나 IEnumerable이면 됨
+- 만약 IEnumerable이 전달된다면 IEnumerable을 구현한 객체 집합의 각각의 개체는 자식 내용으로 추가됨
+- ReplaceNodes는 가변 개수의 내용 매개변수를 받아들일 수 있는 오버로드도 제공하고 있음
+- 이로 인해 다수의 내용으로 기존의 내용을 대체하는 데 사용 가능
+```C#
+books.Element("book").ReplaceNodes{
+    new XElement("title", "Ajax in Action"),
+    new XElement("author", "Dave Crane")
+};
+```
+- SetElementValue와 ReplaceNodes는 모두 개체의 내용에 대해 동작함
+- 내용 업데이트 말고 전체 노드를 바꾸고 싶다면 XNode에 정의된 ReplaceWith 메소드를 이용하면 됨
+    - ReplaceWith는 내용이 아닌 개체 자체에 대해 동작함
+    - 전체 개체가 업데이트될 수 있게 함
+    - 만약 예제의 XML 파일 내에 모든 <title/>개체를 <book_title/> 개체로 바꾸고 싶다면 다음과 같은 코드를 이용 가능
+    - [ReplaceWith를 이용하여 전체 노드를 대체하기]
+    ```C#
+    var titles = books.Descendants("title").ToList();
+    foreach(XElement title in titles){
+        title.ReplaceWith(new XElement("book_title", (string) title));
+        //title 객체가 book_title 객체로 전환됨
+    }
+    ```
+    - XML을 업데이트할 때 선택 가능한 몇 가지 방법이 있음
+    - ReplaceWith는 전체 노드 교체가능하게 함, 특정 개체의 모든 인스턴스를 새로운 개체로 교환해야 하는 경우 유용할 수 있음
+    - SetElementValue와 ReplaceNodes는 개체의 내용을 교체할 수 있는 기능을 제공함
 
 ### 9.5.9. 속성을 가지고 작업하기
+- XAttribute 클래스는 LINQ to XML 내에서 어떤 속성을 지정해줄 때 사용함
+- 속성은 개체나 노드와 같은 계층에 존재하지 않음...
+- LINQ to XML에서 속성은 단순히 이름-값 쌍에 불과함
+- XAttribute 객체를 이름과 값을 매개변수로 생서해주는 생성자가 있다는 것은 놀라운 일이 아님
+- `public XAttribute(XName name, object value)`
 
 ### 9.5.10. XML을 저장하기
