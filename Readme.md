@@ -8,7 +8,7 @@
 
 - Chapter09. LINQ to XML의 소개 
 
-- Chapter10
+- Chapter10. LINQ to XML을 이용한 XML 질의 및 변환
 
 - Chapter11
 

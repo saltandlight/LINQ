@@ -820,3 +820,5 @@ XElement books = new XElement("books",
 );
 books.Save(@"c:\books.XML");
 ```
+- 이제 XML을 저장 가능함
+- 그리고 SaveOptions.DesiableFormatting을 Save에 두 번쨰 매개변수로 넘겨주면 XML의 포매팅(줄바꿈 등)을 끌 수 있음
