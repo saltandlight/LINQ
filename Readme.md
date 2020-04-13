@@ -12,6 +12,6 @@
 
 - Chapter11. 통상적인 LINQ to XML 시나리오
 
-- Chapter12
+- Chapter12. LINQ 확장하기
 
 - Chapter13
