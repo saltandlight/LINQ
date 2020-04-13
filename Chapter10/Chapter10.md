@@ -579,7 +579,3 @@ html.Save("booksResult.xhtml");
 ```
 - [실행결과]
 - ![](cap8.PNG)
-- LINQ to XML이 강력한 변환기능을 제공하는 과정에서 LINQ to XML을 개발한 팀은 기존의 애플리케이션이 변환을 위해 XSLT에 상당히 많은 투자를 하고 있다는 사실을 인지
-- LINQ to XML 객체를 XSLT를 이용하여 변환하는 기능도 함께 제공함
-
-### 10.4.2 LINQ to XML 객체를 XSLT를 이용하여 변환하기
