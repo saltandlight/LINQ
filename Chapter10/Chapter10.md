@@ -146,18 +146,176 @@ foreach(XElement bookElement in bookElements)
 - 바로 아래 계층의 자식 개체들보다는 현재 개체보다 하위 계층에 있는 모든 개체들에 대하여 탐색하기 원하는 경우가 많음
 - 이런 경우 LINQ to XML에서는 Descendants라는 축 메소드를 지원함
 
-### 10.1.4 Descendants
+### 10.1.4 Decendants
+- Decendants 축 메소드는 Elements 메소드와 동일한 방식으로 동작함
+- 그러나 반환되는 개체를 현재 개체의 모든 하위 개체로 해서 반환함
+- Decendants 축 메소드는 특정한 XName을 가진 모든 개체들을 가져오고 싶지만 어디쯤 있는지 잘 모를 경우에 유용함
+- Decendants 축 메소드에는 두 가지 형태가 있음
+    - 1. 매개변수로 xName을 받아 해당 XName을 가진 현재 개체 아래의 모든 개체를 반환
+    - 2. 매개변수 없이 호출되어 XName과 관계없이 하위의 모든 개체를 반환해줌
+- 이제는 앞에 있었던 XML을 재활용할 것
+- 하나의 분류에 속한 모든 책들을 검색하는 대신 분류와 관계없이 모든 책들을 반환하고자 함
+- 책 개체들이 XML의 여러 다른 계층에 존잭가능하므로 Elements를 사용하는 것은 불가능함
+- 대신 당연히 Decendants 축 메소드를 이용하게 될 것임
+- XML 내의 모든 책들을 가져오려면 다음과 같은 형태로 코드를 작성하면 됨
+- [Decendants 메소드를 이용하여  XML 내의 모든 책들을 가져오기]
+```C#
+XElement books = XElement.Load("categorizedBooks.xml");
+foreach (XElement bookElement in books.Descendants("book"))
+{
+    Console.WriteLine((string)bookElement);
+}
+```
+- [결과]
+- ![](cap1.PNG)
+- Descendants 축 메소드는 자기 자신을 검색된 개체의 트리에 포함시키지 않는다는 것이 중요함
+- 현재 개체를 포함시키고자 한다면 DesendatnsAndSElf 축 메소드를 사용하면 됨
+- Descendants 축 메소드처럼 DescendantsAndSelf 메소드 또한 XElement객체들의 IEnumerable 컬렉션을 반환함
+- 유일한 차이점: DescendantsAndSelf가 자기 자신을 반환하는 XElement 객체에 포함시킨다는 것
+- [앞에서 사용해왔던 XML]
+```XML
+<category name="Technical">
+  <category name=".NET">
+    <books>
+      <book>CLR via C#</book>
+      <book>Essential .NET</book>
+    </books>
+  </category>
+  <category name="Design">
+    <books>
+      <book>Refactoring</book>
+      <book>Domain Driven Design</book>
+      <book>Patterns of Enterprise Application Architecture</book>
+    </books>
+  </category>
+  <books>
+    <book>Extreme Programming Explained</book>
+    <book>Programatic Unit Testing with C#</book>
+    <book>Head First Design Patterns</book>
+  </books>
+</category>
+```
+- 이제 다음과 같은 코드를 바탕으로 Descendants와 DescendantsAndSelf 메소드를 비교해보자
+- [Descendants와 DescendantsAndSelf 축 메소드의 비교]
+```C#
+XElement root = XElement.Load("categorizedBooks.xml");
+IEnumerable<XElement> categories = root.Descendants("category");
+
+Console.WriteLine("Descendants");
+foreach (XElement categoryElement in categories)
+{
+    Console.WriteLine(" - "+(string)categoryElement.Attribute("name"));
+}
+
+categories = root.DescendantsAndSelf("category");
+Console.WriteLine("DescendantsAndSelf");
+foreach (XElement categoryElement in categories)
+{
+    Console.WriteLine(" - "+(string)categoryElement.Attribute("name"));
+}
+```
+- [실행 결과]
+- ![](cap3.PNG)
+- 코드에서 알 수 있듯이 Descendants와 DescendantsAndSelf의 호출방법은 완전히 동일함
+- 실행 결과를 살펴보면 DescendantsAndSElf는 상위 분류(Technical)을 출력에 포함시켰음을 알 수 있음
+
+- Descendants와 DescendantsAndSelf를 이용해 간편하게 하나의 XML 트리내에서 관심있는 모든 개체들이 현재 노드 아래에 있을 경우, 하위 개체들을 손쉽게 가져올 수 있음
+- XML에 대해 질의할 때, Element, Elements, Attribute, Descendants는 XML 트리내에서 관심 있는 개체와 속성들을 찾아내는 가장 핵심적인 축 메소드임을 뜻함
+
+- Elements와 Descendants가 IEnumerable<XElement>를 반환해줌 -> 그 결과물은 표준 질의 연산자나 질의 표현식과 매우 잘 연동되어 사용 가능함
+- [XML에 대해 질의하기 위해 LINQ 질의 표현식 문법을 이용하기]
+```C#
+XElement root = XElement.Load("categorizedBooks.xml");
+var books = from book in root.Descendants("book")
+            select (string)book;
+
+foreach (string book in books)
+{
+    Console.WriteLine(book);
+}
+```
+- [실행결과]
+- ![](cap4.PNG)
+- 여기서 확인 가능하듯이 Descendants 축 메소드를 이용하면 LINQ to XML을 통해 객체와 관계형 데이터에 대한 질의를 하는 것과 동일한 문법으로 XML 데이터에 대해 질의 가능함
 
 ### 10.1.5 Ancestors
+- Ancestors 축 메소드는 탐색의 방향만 반대일 뿐 나머지는 모두 Descendants 메소드와 동일하게 동작함
+- 동일한 메소드 시그너처를 가지고 있고 AncesotrsAndSelf, AncestorNodes와 같이 유사한 아류 메소드들을 갖고 있음
+- Ancestors는 XML 트리상에서 현재 노드 위에 존재하는 개체들을 탐색함
+- 지금까지는 어떻게 분류 개체내에 있는 책들의 목록을 Element와 Elements를 이용하여 가져오는지, 그리고 어떻게 XML 내의 모든 책들을 DEscendants로 가져오는지에 대해 살펴봄
+- 이 절에서는 어떻게 Ancestors를 이용해 특정 책이 속한 모든 분류의 목록을 얻어낼 수 있는지 알아볼 것
+- 분류는 다음과 같은 형태로 나타남
+- `Domain Driven Design is in the: Technical/Design category.`
+
+- 가장 먼저 해야할 일: 관심을 가지고 있는 책들을 선택하는 것
+- XML에 Descendants 축 메소드를 이용해서 모든 책들을 가져와야 함
+- 모든 책들을 가져오고나면 책의 목록에 대해 다음처럼 Where와 First같은 표준 질의 연산자를 이용하여 관심 있는 하나의 책으로 좁혀나감
+```C#
+XElement root = XElement.Load("categorizedBooks.xml");
+XElement dddBook = root.Descendants("book")
+                        .Where(book =>
+                              (string)book == "Domain Driven Design"
+                        ).First();
+```
+- Domain Driven Design이라는 책 개체를 골라냄
+- 책 개체를 갖게 되면 Ancestors 축 메소드를 호출하여 책 개체가 속한 분류의 목록을 얻어올 수 있음
+- 분류의 목록에 Reverse와 String.Join을 활용하여 처리해주면 원하는 규격으로 분류정보를 받아올 수 있음
+```C#
+XElement root = XElement.Load("categorizedBooks.xml");
+XElement dddBook = root.Descendants("book")
+                        .Where(book =>
+                        (string)book == "Domain Driven Design"
+                        ).First();
+
+IEnumerable<XElement> ancestors = dddBook.Ancestors("category").Reverse();
+
+string categoryPath =
+        String.Join("/", ancestors.Select(e =>
+        (string)e.Attribute("name")).ToArray());
+
+Console.WriteLine((string)dddBook + " is in the: "+categoryPath+" category.");
+```
+- [결과]
+- ![](cap5.PNG)
+
 ### 10.1.6 ElementsAfterSelf, NodesAfterSelf, ElementsBeforeSelf, NodesBeforeSelf
+- ElementsAfterSelf, ElementsBeforeSelf, NodesAfterSelf, NodesBEforeSelf 메소드는 현재 개체의 앞뒤에 존재하는 모든 개체를 받아올 수 있는 매우 쉬운 방법을 제공
+- ElementsBeforeSelf: 현재 개체보다 앞에 있는 모든 XElement 개체 반환
+- ElementsAfterSelf: 현재 개체보다 뒤에 있는 모든 XElement 개체 반환
+- 유사하게 개체만 받아오지 않고 모든 노드를 받아오고 싶다면 NodesBeforeSelf와 NodesAfterSelf 메소드를 사용 가능함
+- **중요한 점:**
+    - Ancestors나 Descendants 축 메소드랑 달리 ElementsBeforeSelf, ElementsAfterSelf, NodesBeforeSelf, NodesAfterSelf 메소드들은 현재 개체와 동일한 계층에 있는 개체들만 탐색한다는 것임
+- [특정 개체와 동일한 계층에 있는 모든 개체 노드들을 ElementsBEforeSelf로 찾아내기]
+```C#
+XElement root = XElement.Load("categorizedBooks.xml");
+XElement Book = root.Descendants("book")
+                    .Where(book =>
+                           (string)book == "Domain Driven Design"
+                           ).First();
+
+IEnumerable<XElement> beforeSelf = Book.ElementsBeforeSelf();
+foreach (XElement element in beforeSelf)
+{
+    Console.WriteLine((string) element);
+}
+```
+- [실행결과]
+- ![](cap6.PNG)
+
+- 출력된 결과로 알 수 있듯이 ElementsBeforeSElf는 현재 노드와 같은 계층에 있는 개체들들로 탐색의 범위가 제한됨
+- Ancestor나 Descendants 축 메소드와 같이 계층간을 오가며 탐색하지 않는다는 뜻임
 
 ## 10.2 표준 질의 연산자
 ### 10.2.1 Select로 사영하기
+
 ### 10.2.2 Where로 필터링하기
+
 ### 10.2.3 정렬과 그룹화
 
 ## 10.3 XPath를 이용하여 LINQ to XML 객체에 대해 질의하기
 
 ## 10.4 XML 변환하기
+
 ### 10.4.1 LINQ to XML 변환
+
 ### 10.4.2 LINQ to XML 객체를 XSLT를 이용하여 변환하기
