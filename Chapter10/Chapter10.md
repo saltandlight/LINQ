@@ -496,7 +496,90 @@ foreach (XElement book in books)
 - ![](cap7.PNG)
 
 ## 10.4 XML 변환하기
+- LINQ to XML은 LINQ의 표준 질의 연산자와 축 메소드, 함수형 생성의 장점들을 바탕으로 XML을 변환하는 매우 강력하고 직관적인 방법을 제공함
 
 ### 10.4.1 LINQ to XML 변환
+- 다음 코드의 XML을 브라우저에서 볼 수 있는 XHTML 문서로 변환시켜봄
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<books>
+    <book>
+        <title>LINQ in Action</title>
+        <author>Fabrice Marguerie</author>
+        <author>Steve Eichert</author>
+        <author>Jim Wooley</author>
+        <publisher>Manning</publisher>
+    </book>
+    <book>
+        <title>AJAX in Action</title>
+        <author>Dave Crane</author>
+        <publisher>Manning</publisher>
+    </book>
+    <book>
+        <title>Patterns of Enterprise Application Architecture</title>
+        <author>Martin Fowler</author>
+        <publisher>Apress</publisher>
+    </book>
+</books>
+```
+- 변환을 마쳤을 때는 다음과같은 XHTML을 얻을 수 있음
+```xhtml
+<html>
+    <body>
+        <h1>LINQ Books Library</h1>
+        <div>
+            <b>LINQ in Action</b>
+            By: Fabrice Marguerie, Steve Eichert, Jim Wooley
+            Published By: Manning
+        </div>
+        <div> <b>AJAX in Action</b>
+            By: Dave Crane
+            Published By: Manning
+        </div>
+        <div>
+            <b>Patterns of Enterprise Application Architecture</b>
+            By: Martin Fowler
+            Published By: Apress
+        </div>
+    </body>
+</html>
+```
+- 이런 XHTML로 변환하기 위해서는 LINQ to XML이 제공하는 축 메소드와 함수형 생성기능을 최대한 활용해야 함
+- 결과 XHTML을 복사하고 XML을 LINQ로 붙여넣기라는 Visual Studio의 추가기능을 사용하여 XML을 작성하기 위한 함수형 생성 코드를 작성(여기서는 안 됨...)
+- [XML 내의 각각의 책이 담고 있는 제목, 출판사, 저자 정보를 가져오기]
+```C#
+XElement booksXml = XElement.Load("book.xhtml");
+
+var books = from book in booksXml.Descendants("book")
+            select new {
+                Title = (string)book.Element("title"),
+                Publisher = (string)book.Element("publisher"),
+                Authors = String.Join(", ",
+                                 book.Descendants("author")
+                                 .Select(a => (string)a).ToArray())
+};
+```
+- 함수형 생성문과 질의문이 준비되었으므로 잘 조합하여 하나의 LINQ to XML 변환으로 만들어보자
+- [LINQ to XML 변환을 이용하여 XML을 XHTML로 변환하기]
+```C#
+XElement html =
+                new XElement("html",
+                new XElement("body",
+                    new XElement("h1", "LINQ Books Library"),
+                    from book in booksXml.Descendants("book")
+                    select new XElement("div",
+                        new XElement("b", (string)book.Element("title")),
+                        "By: " + String.Join(", ", book.Descendants("author")
+                                                     .Select(b => (string)b).ToArray()) +
+                        "Published By: " + (string)book.Element("publisher")
+                    )
+                 )
+                 );
+html.Save("booksResult.xhtml");
+```
+- [실행결과]
+- ![](cap8.PNG)
+- LINQ to XML이 강력한 변환기능을 제공하는 과정에서 LINQ to XML을 개발한 팀은 기존의 애플리케이션이 변환을 위해 XSLT에 상당히 많은 투자를 하고 있다는 사실을 인지
+- LINQ to XML 객체를 XSLT를 이용하여 변환하는 기능도 함께 제공함
 
 ### 10.4.2 LINQ to XML 객체를 XSLT를 이용하여 변환하기

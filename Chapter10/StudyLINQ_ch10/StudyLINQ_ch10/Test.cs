@@ -124,9 +124,38 @@ namespace StudyLINQ_ch10
                 Console.WriteLine((string)book);
             }
         }
+
+        static public void bringBookInfo()
+        {
+            XElement booksXml = XElement.Load("books.xml");
+
+            var books = from book in booksXml.Descendants("book")
+                        select new {
+                            Title = (string)book.Element("title"),
+                            Publisher = (string)book.Element("publisher"),
+                            Authors = String.Join(", ",
+                                      book.Descendants("author")
+                                      .Select(a => (string)a).ToArray())
+                        };
+
+            XElement html =
+                new XElement("html",
+                new XElement("body",
+                    new XElement("h1", "LINQ Books Library"),
+                    from book in booksXml.Descendants("book")
+                    select new XElement("div",
+                        new XElement("b", (string)book.Element("title")),
+                        "By: " + String.Join(", ", book.Descendants("author")
+                                                     .Select(b => (string)b).ToArray()) +
+                        "Published By: " + (string)book.Element("publisher")
+                    )
+                 )
+                 );
+            html.Save("booksResult.xhtml");
+        }
         static public void Main()
         {
-            useXPath();
+            bringBookInfo();
             Console.ReadKey();
         }
     }
