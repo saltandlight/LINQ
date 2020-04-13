@@ -445,6 +445,55 @@ foreach(var group in groups)
 
 ## 10.3 XPath를 이용하여 LINQ to XML 객체에 대해 질의하기
 - XPath는 축 메소드나 표준 질의 연산자들처럼 XML 문서에서 정보를 찾는 데 사용되는 언어
+- 그러나 XML 트리를 탐색하여 원하는 개체와 속성을 찾아내는 API를 제공하는 대신, XPath는 텍스트 기반의 질의 언어를 사용하여 받아오고 싶은 정보를 정의하여 수행하는 방법을 제공함
+- XML 데이터에 대해 질의할 때 사용하는 두 가지 주요 도구는 표준 질의 연산자와 LINQ to XML 축 메소드
+- 그러나 XML을 다룰 때, 보편화되어 있는 XPath 질의를 사용할 수도 있음
+- 이를 위해 System.Xml.XPath 네임스페이스 속에 XPath를 LINQ to XML 객체들에 대해 사용할 수 있게 해주는 몇 가지 연결고리가 추가됨
+- LINQ to XML에 대해 XPath를 이용하기 위해서는 System.Xml.XPAth 네임스페이스에 다음과 같이 참조를 추가해줘야 함
+- `using System.Xml.XPath`
+- 이런 참조를 추가하면 클래스들에 몇 개의 XNode에서 가져오 ㄴ확장 메소드를 추가해줌
+- XPathNavigator를 생성가능하게 되는 것 외에도 확장 메소드들은 XPath표현식이 XPathEvaluate메소드를 통해 XNode에 대해 평가받을 수 있게 해줌
+- 마지막으로 XPathSelectElement와 XPathSElectElements 확장 메소드는 LINQ to XML 객체를 XPath 표현식을 통해 검색 가능하게 함
+- XPathSelectElement는 XPath 표현식을 만족하는 첫 개체를 반환하고 XPathSelectElements는 만족하는 모든 개체들을 반환함
+```XML
+<category name="Technical">
+  <category name=".NET">
+    <books>
+      <book>CLR via C#</book>
+      <book>Essential .NET</book>
+    </books>
+  </category>
+  <category name="Design">
+    <books>
+      <book>Refactoring</book>
+      <book>Domain Driven Design</book>
+      <book>Patterns of Enterprise Application Architecture</book>
+    </books>
+  </category>
+  <books>
+    <book>Extreme Programming Explained</book>
+    <book>Programatic Unit Testing with C#</book>
+    <book>Head First Design Patterns</book>
+  </books>
+</category>
+``` 
+- XPath를 사용해서 XML에 대해 질의하는 과정에서 어떻게 이 확장 메소드들을 이용할 수 있는지 알아보자
+- Descendants 질의 축 메소드는 전체 XML 트리 속을 탐색하므로 이런 식의 질의를 하기에 알맞음
+- 동등한 질의를 XPath로 하여 트리 내의 모든 book 개체를 가져오려면 //book과 같이 질의 가능
+- PathSelectElements 확장 메소드가 IEnumerable<XElement> 를 반환하므로 다음의 질의 표현식 문법을 이용하여 질의 작성 가능
+- [XPath를 이용하여 XElement 객체에 대해 질의하기]
+```C#
+XElement root = XElement.Load("categorizedBooks.xml");
+var books = from book in root.XPathSelectElements("//book")
+            select book;
+
+foreach (XElement book in books)
+{
+    Console.WriteLine((string)book);
+}
+```
+- [실행결과]
+- ![](cap7.PNG)
 
 ## 10.4 XML 변환하기
 

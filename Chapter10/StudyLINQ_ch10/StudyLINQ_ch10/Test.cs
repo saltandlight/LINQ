@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using System.Xml.XPath;
 
 namespace StudyLINQ_ch10
 {
@@ -111,9 +112,21 @@ namespace StudyLINQ_ch10
                 Console.WriteLine((string) element);
             }
         }
+
+        static public void useXPath()
+        {
+            XElement root = XElement.Load("categorizedBooks.xml");
+            var books = from book in root.XPathSelectElements("//book")
+                        select book;
+
+            foreach (XElement book in books)
+            {
+                Console.WriteLine((string)book);
+            }
+        }
         static public void Main()
         {
-            useElementsBeforeSelf();
+            useXPath();
             Console.ReadKey();
         }
     }
