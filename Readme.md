@@ -10,7 +10,7 @@
 
 - Chapter10. LINQ to XML을 이용한 XML 질의 및 변환
 
-- Chapter11
+- Chapter11. 통상적인 LINQ to XML 시나리오
 
 - Chapter12
 
