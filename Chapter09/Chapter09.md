@@ -778,7 +778,45 @@ books.Element("book").ReplaceNodes{
 - XAttribute 클래스는 LINQ to XML 내에서 어떤 속성을 지정해줄 때 사용함
 - 속성은 개체나 노드와 같은 계층에 존재하지 않음...
 - LINQ to XML에서 속성은 단순히 이름-값 쌍에 불과함
-- XAttribute 객체를 이름과 값을 매개변수로 생서해주는 생성자가 있다는 것은 놀라운 일이 아님
+- XAttribute 객체를 이름과 값을 매개변수로 생성해주는 생성자가 있다는 것은 놀라운 일이 아님
 - `public XAttribute(XName name, object value)`
+- XML을 생성하면서 함수형 생성문이나 Add 메소드에 하나의 매개변수로 전달하는 바업 사용 가능
+- 책 개체를 만들면서 출판일자를 속성으로 포함하고 있따면 다음의 두 가지 경우가 있음
+    - 1. 속성을 생성 시 정의하는 방법
+        - `new XElement("book", new XAttribute("pubDate", "July 31, 2006));`
+    - 2. 차후에 Add 메소드를 통해 매개변수에 속성을 전달하는 방법
+        - `book.Add(new XAttribute("pubDate", "July 31, 2006"));`
+    - 1과 2의 결과
+        - `<book pubDate="July 31, 2006"/>`
+- Add 메소드 외에도 SetAttributeValue를 이용하여 개체에 속성을 추가할 가능성도 있음
+- SetAttributeValue는 SetElementValue 메소드와 유사함
+- SetAttributeValue는 기존의 XElement 객체에 속성을 추가하거나 업데이트할 수 있게 해줌
+- 만약 개체에 해당 속성이 이미 존재한다면 업데이트될 것임
+- 존재하지 않는다면 추가될 것
+- 만약 pubData 속성을 업데이트하려면 SetAttributeValue 메소드를 사용하면 될 것임
+    - `book.SetAttributeValue("pubDate", "October 1, 2006");`
+- 이것과 유사한 SetElementValue와 마찬가지로, SetAttributeValue는 value 매개변수에 null을 넣는 데 사용 가능함
+- SetAttributeValue를 이용하여 속성을 제거할 수 있는 것 외에도, XAttribute 클래스는 Remove라는 메소드를 가지고 있음
+    - `book.Attribute("pubDate").Remove();`
+- Remove 메소드는 하나의 XAttribute 또는 IEnumerable<XAttribute>에 대해 호출 가능
+- 후자에 대한 Remove의 호출은 IEnumerbale에 포함된 속성들을 각제 관계된 개체에서 분리하는 역할을 함
+- LINQ to XML에서 속성을 다루는 방법은 개체를 다루는 방법과 매우 유사함
+- 차이점: XAttribute 객체들은 개체 트리에 종속된 노드가 아니라 XML 개체에 연관된 이름-값 쌍(name-value pair)라는 점임
 
 ### 9.5.10. XML을 저장하기
+- XML을 저장하는 방법은 매우 직관적임
+- XElement와 XDocument 클래스는 XML을 파일로 저장해주는 Save라는 메소드를 제공해줌
+- XmlTextWriter, XmlWriter 등 이와 유사한 기능을 하는 메소드를 제공하고 있음
+- XElement 객체를 디스크에 파일로 저장하기 위해서는 Save를 호출하면서 파일 경로를 매개변수로 넘겨주면 됨
+- [Save 메소드를 이용하여 XElement를 디스크에 저장하기]
+```C#
+XElement books = new XElement("books",
+    new XElement("book",
+        new XElement("title", "LINQ in Action"),
+        new XElement("author", "Steve Eichert"),
+        new XElement("author", "Jim Wooley"),
+        new XElement("author", "Fabrice Marguerie")
+    )
+);
+books.Save(@"c:\books.XML");
+```
