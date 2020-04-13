@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<books>
+  <book>
+    <title>LINQ in Action</title>
+    <authors>
+      <author>
+        <firstname>Fabrice</firstname>
+        <lastname>Marguerie</lastname>
+        <website>http://linqinaction.net/</website>
+      </author>
+      <author>
+        <firstname>Steve</firstname>
+        <lastname>Eichert</lastname>
+        <website>http://iqueryable.com/</website>
+      </author>
+      <author>
+        <firstname>Jim</firstname>
+        <lastname>Wooley</lastname>
+        <website>http://devauthority.com/blogs/jwooley/</website>
+      </author>
+    </authors>
+    <subject>
+      <name>LINQ</name>
+      <description>LINQ shall rule the world</description>
+    </subject>
+    <publisher>Manning</publisher>
+    <publicationDate>January 15, 2008</publicationDate>
+    <price>44.99</price>
+    <isbn>1933988169</isbn>
+    <notes>Great book!</notes>
+    <summary>LINQ in Action is great!</summary>
+    <reviews>
+      <review>
+        <user>Steve Eichert</user>
+        <rating>5</rating>
+        <comments>What can I say, I'm biased!</comments>
+      </review>
+    </reviews>
+  </book>
+  <book>
+    <title>Patterns of Enterprise Application Architecture</title>
+    <authors>
+      <author>
+        <firstname>Martin</firstname>
+        <lastname>Fowler</lastname>
+        <website>http://linqinaction.net/</website>
+      </author>
+    </authors>
+    <subject>
+      <name>LINQ</name>
+      <description>LINQ shall rule the world</description>
+    </subject>
+    <publisher>Addison-Wesley</publisher>
+    <publicationDate>March 9, 2012</publicationDate>
+    <price>41.57</price>
+    <isbn>0321127420</isbn>
+    <notes>Great book!</notes>
+    <summary>LINQ in Action!!!!!</summary>
+    <reviews>
+      <review>
+        <user>Joseph</user>
+        <rating>1</rating>
+        <comments>Stream-of-conscouisness presenatation promoting worst-practices</comments>
+      </review>
+    </reviews>
+  </book>
+</books>
