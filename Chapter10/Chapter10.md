@@ -306,13 +306,145 @@ foreach (XElement element in beforeSelf)
 - Ancestor나 Descendants 축 메소드와 같이 계층간을 오가며 탐색하지 않는다는 뜻임
 
 ## 10.2 표준 질의 연산자
+- 표준 질의 연산자들은 IEnumerable<T>나 IQueryable<T>를 구현하는 어떠한 시퀀스의 객체들에도 동작함
+- 축 메소드들은 XElement나 XAttribute, XNode 객체의 IEnumerable 를 반환하여 표준 질의 연산자를 사용 가능하게 함
+- 표준 질의 연산자를 사용할 수 있게 되면서 LINQ to XML 축 메소드들은 객체나 관계형 데이터에서 XML 데이터까지 배운 모든 것들을 활용가능하게 해줌
+- 객체, 관계형 데이터, XML 등을 오가면서 전혀 새로운 언어나 문법을 배워야 하는 대신 LINQ를 이용하여 세 가지 모두를 동일한 표준 질의 연산자와 질의 표현식을 이용하여 질의 가능함
+
+- 표준 질의 연산자를 이용하여 Amaxon에서 가장 많이 태그가 달린 20권의 책을 포함하는 XML 속을 탐색해볼 것
+- 표준 질의 연산자를 이용하여 책의 목록 속을 훑어보고 가장 재미있다고 생각되는 책들로 목록 범위 축소 -> 출판사별로 그룹화할 것임
+- 어떻게 Amaxon.com에서 태그가 많이 달리 냋ㄱ들의 목록을 담은 XML을 받아올 수 있는지 알아보자
+
+- Amazon은 Amazon.com이 보유하고 있는 데이터들에 웹 서비스 AI를 통해 접근 가능하게 해주는 몇 가지 웹 서비스를 제공하고 있음
+- Amazon의 웹 섯비스에 접근하기 위해 Amazon의 웹 서비스 프로그램에 가입해야 함
+- 가입 -> 사용자의 계정에서 Amazon 웹 서비스에 접근 가능한 접근 키들이 주어짐
+- amazon 관련 내용은 책을 참고하기...
+- select를 이용하여 각각의 책의 제목을 XML에서 읽어오자
+
 ### 10.2.1 Select로 사영하기
+- 가장 자주 사용되는 표준 질의 연산자
+- 시퀀스에 대해 사영(projection) 작업을 수행시킴
+- 이 경우, 시퀀스는 IEnumerable<XElement>의 형식을 가지고 있음
+- 어떻게 이전 절에서 논의했던 Descendants 질의 축 메소드와 함께 Select 절을 이용해서 XML에서 모든 책들의 제목들을 가져올 수 있는지 알아보자
+- [표준 질의 연산자 Select를 이용하여 XML 문서에 대해 사영을 적용하기]
+```C#
+XElement tags = XElement.Load(url);
+var titles = tags.Descendants(ns+"Title")
+                 .Select(titleElement => (string)titleElement);
+
+foreach(String title in titles)
+{
+    Console.WriteLIne(title);
+}                 
+```
+- XML에 포함된 모든 <Title> 개체를 추출하기 위해 Descendants 축 메소드를 이용함
+- Amazon이 반환한 XML은 기본 네임스페이스를 가지고 있음 -> 로컬 XNamespace 변수를 선언해서 Descendants 호출 시 사용
+- 일단 모든 개체를 가져오면 Select 연산자를 호출, <Title> 개체에서 제목을 추출하는 선택자(selector)를 전달함
+- 결과는 원본 XML에 포함된 모든 책들의 제목을 담고 있는 시퀀스
+- Select 연산자는 다음과 같이 표준 질의 표현식 문법으로 나타낼 수 있음
+- [LINQ 질의 표현식 문법을 이용하여 Select 표준 질의 연산자를 호출하기]
+```C#
+XElement tags = XElement.Load(url);
+var titles = from title in tags.Descendants(ns+"Title")
+             select (string)title;
+```
+- 결국 표준 질의 연산자를 이용하여 직접적인 메소드 호출을 하는 문법을 사용하든지 질의 표현식 문법을 사용하든지 동일한 코드기 실행됨
+- 질의 표현식이 가진 표현력&간결함 -> 질의 표현식을 더 선호함
 
 ### 10.2.2 Where로 필터링하기
+- Where 연산자는 분류상 제한 연산자에 속함
+- 책의 목록을 관심 있는 부분집합으로 제한해주는 역할을 하기 때문임
+- 책들을 필터링하기 위해 사용 가능한 속성들은 그리 많지 않음
+- 그래서 제목에 "Windows Presentation Foundation"이 있는 책들을 걸러내는 필터링만 가해줄 것임
+- [Amazon.com에서 XML을 불러오고 책의 목록을 where절을 통해 필터링하기]
+```C#
+XElement tags = XElement.Load(url);
+
+var wpfBooks = 
+    from book in tags.Descendants(ns+"Item")
+    let bookAttrbutes = book.Element(ns + "ItemAttributes")
+    let title = ((string)bookAttributes.Element(ns+"Title"))
+    where title.Contains("Windows PResentation Foundation")
+    select title;
+
+foreach(string title in wpfBooks)
+{
+    Console.WriteLine(title);
+}
+```
+- let 연산자: 값을 할당할 때 사용함
+- [실행결과]
+```C#
+Windwos Presentation Foundation Unleashed (WPF) (Unleashed)
+Programming Windows Presentation Foundation (Programming)
+```
+- 책의 목록을 필터링하기 위해 XML의 모든 <Item> 개체들을 Descendants 축 메소드를 이용하여 선택함
+- 일단 모든 개체가 <Item>개체가 선택되고 난 후 let 절을 이용하여 <ItemAttributes> 개체를 bookAttribute라는 질의 변수에 할당
+- 최종적으로 where 절을 구성하여 제목에 "Windows Presentation Foundation"이 들어가는 책으로만 목록을 제한함
+
+- where절을 표현하기 위해 <Title> 개체를 string로 캐스팅해야 함
+- 다행히 LINQ to XML은 XElement와 XAttribute 객체를 위해 명시적인 오버로딩된 연산자를 제공하고 있음
+- 일단 <Title> 개체가 string로 캐스팅되고 난 후애  where 절의 정의를 Contains 메소드를 "Windows Presenatation Fourndation:을 매개변수로 하여 수행하면 됨
 
 ### 10.2.3 정렬과 그룹화
+- LINQ는 정렬을 위해 두 가지의 표준 질의 연산자를 제공함
+- OrderBy 표준 질의 연산자는 열거된 개체들을 오름차순으로 정렬함
+- 만약 오름차순이 아니라 내림차순으로 정렬하고 싶다면 OrderByDescending 표준 질의 연산자를 이용하면 됨
+- OrderBy와 ORderByDescending 모두 동일한 질의 표현식 구조를 갖고 있음
+- [orderby 표현식으로 질의의 결과들을 정렬하기]
+```C#
+XElement tags = XElement.Load(url);
+var groups = 
+  from book in tags.Descendants(ns+"Item")
+  let bookAttributes = book.Element(ns+"ItemAttributes")
+  let title = (string)bookAttributes.Element(ns+"Title")
+  orderby title
+  select title;
+```
+- 책을 오름차순이 아닌 내림차순으로 정렬하는 것은 단순히 orderby title 클래스를 orderby title descending 클래스로 변환하는 정도의 일
+- orderby 연산자는 객체나 관계형 데이터에서도동일한 형태로 동작함
+- 유일한 차이점: 정렬에 사용되는 키값이 Element, XAttribute, XNode와 같은 LINQ to XML 객체가 된다는 것
+- 여러 개의 키값을 설정하는 것이 가능 -> 하나의 표현식내에서 같은 키값을 가진 개체를 또다시 다른 키값으로 정렬 가능하게 됨
+
+- GroupBy 연산자를 알아보자
+- GroupBy 표준 질의 연산자는 일련의 데이터를 특정 조건에 따라 그룹화할 수 있게 해줌
+- [group 표현식으로 질으의 결과들을 그룹화하기]
+```C#
+XElement tags = XElement.Load(url);
+var groups =
+    from book in tags.Descendants(ns+"Item")
+    let bookAttributes = book.Element(ns+"ItemAttributes")
+    let title = (string)bookAttributes.Element(ns+"Title")
+    let publisher = (string)bookAttributes.Element(ns+"Manufacturer")
+    orderby publisher, title
+    group title by publisher;
+```
+- 질의 내에서 Descendants 축 메소드를 이용하여 책들을 추출하는 것부터 함
+- Element 축 메소드를 통해 책 제목과 출판사에 관한 정보를 받아옴
+- 책 제목과 출판사에 대한 정보를 바탕으로 결과를, 먼저 출판사, 그리고 책 제목순으로 정렬, 마지막에 출판사별로 그룹화함
+- group by 질의 표현식은 IGrouping<K, T>와 IEnumerable<T> 인터페이스를 구현하는 객체를 반환함
+- K는 group by를 적용하려는 값의 형이고 T는 그룹 안에 집어넣는 객체의 형임
+```C#
+group title by publisher
+//      T        K(group의 키)
+```
+- group by 표현식 내에서 T와 K에 해당하는 형은 모두 문자열임
+- group의 key는 publisher, group에 담겨있는 아이는 title
+- 받아온 결과가 출판사별로 그룹화되었으므로 반환된 결과들에 대해 반복문을 수행하여 콘솔에 표시해보자
+```C#
+foreach(var group in groups)
+{
+    Console.WriteLine(Group.Count() + "book(s) published by "+group.Key);
+    foreach(Var title in group){
+        Console.WRiteLine(" - "+title);
+    }
+}
+```
+- 모든 표준 질의 연산자들이 동등한 질의 표현식 절을 갖고 있는 것은 아님
+- LINQ to Objects나 LINQ to SQL처럼 LINQ to XML은 고전적인 표준 질의 연산자 메소드들을 이요하여 그런 연산자들을 호출하도록 하고 있음
 
 ## 10.3 XPath를 이용하여 LINQ to XML 객체에 대해 질의하기
+- XPath는 축 메소드나 표준 질의 연산자들처럼 XML 문서에서 정보를 찾는 데 사용되는 언어
 
 ## 10.4 XML 변환하기
 
