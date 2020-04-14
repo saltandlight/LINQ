@@ -305,6 +305,15 @@ select new {
 };
 ```
 - 사용자가 특정 출판사의 책을 확인하려고 할 때, 내부적으로는 비슷한 유형의 join 문을 매번 호출할 가능성이 높음
+- 이런 반복적인 연산을 수행하기 위해 유틸리티 질의 연산자(utility query operator)를 매번 생성하는 것은 매우 유용하고 효과적일 것임
+- 다음 코드의 연산자는 일련의 책 중에서 특정 출판사의 책들을 골라냄
+- [Books 사용자 정의 질의 연산자]
+```C#
+static public IEnumerable<Book> Books(this Publisher publisher, IEnumerable<Book> books)
+{
+    return books.Where(book => book.Publisher == publihser);
+}
+```
 
 #### Book.IsExpensive
 
