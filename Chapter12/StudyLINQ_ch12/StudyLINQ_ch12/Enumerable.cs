@@ -22,6 +22,11 @@ namespace StudyLINQ_ch12
             return sum;
         }
 
+        internal static IEnumerable<TSource> Where<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
+        {
+            throw new NotImplementedException();
+        }
+
         public static int? Sum(this IEnumerable<int?> source)
         {
             if (source == null)
@@ -35,6 +40,11 @@ namespace StudyLINQ_ch12
                         sum += v;
             }
             return sum;
+        }
+
+        internal static IEnumerable<TResult> Select<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> selector)
+        {
+            throw new NotImplementedException();
         }
 
         public static int Sum<T>(this IEnumerable<T> source,

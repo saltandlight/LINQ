@@ -35,5 +35,16 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Book.cs" />
+    <Compile Include="CustomImplementation.cs" />
+    <Compile Include="CustomQueryOperators.cs" />
+    <Compile Include="Enumerable.cs" />
+    <Compile Include="SumExtensions.cs" />
+    <Compile Include="TestCustomImplementation.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Data.Linq" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

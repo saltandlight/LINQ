@@ -38,5 +38,15 @@ namespace StudyLINQ_ch12
         {
             return books.Where(book => book.Publisher == publihser);
         }
+
+        public static Boolean IsExpensive(this Book book)
+        {
+            if (book == null)
+                throw new ArgumentNullException("book");
+
+            return (book.Price > 50) ||
+                    ((book.Price / book.PageCount) > 0.10M);
+            //책이 비싸다 = 절대적인 가격이 높거나 페이지 수에 비해 상대적으로 가격이 높은 경우임
+        }
     }
 }

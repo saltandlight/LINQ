@@ -314,15 +314,180 @@ static public IEnumerable<Book> Books(this Publisher publisher, IEnumerable<Book
     return books.Where(book => book.Publisher == publihser);
 }
 ```
+- 이 새로운 Books 연산자는 기존 질의 표현식을 다음과 같이 간소하게 해줌
+```C#
+from publisher in SampleData.Publishers
+select new{
+    Publisher = publisher.Name,
+    TotalPrice = publisher.Books(SampleData.Books).TotalPrice()
+};
+```
 
 #### Book.IsExpensive
+- 이 절의 마지막 연산자는 어떤 특정 개념을 단 한 번만 구현하여 뛰어난 재사용성을 바탕으로 간편하게 이후 코드에 적용 가능한 방법을 보여줄 것임 
+- 다음 예제의 연산자는 어떤 책을 매개변수로 받아서 그 책이 비싼지 여부를 반환함
+- [IsExpensive 사용자 질의 연산자]
+```C#
+public static Boolean IsExpensive(this Book book)
+{
+    if(book == null)
+        throw new ArgumentNullException("book");
+    
+    return (book.Price > 50) ||
+            ((book.Price / book.PageCount) > 0.10M);
+            //책이 비싸다 = 절대적인 가격이 높거나 페이지 수에 비해 상대적으로 가격이 높은 경우임
+}
+```
+- 예제에서 구현된 IsExpensive 연산자는 어떤 책이 비싼지 여부를 판단 시마다 LINQ 질의문 속에서 이용 가능(다음 예시에서 이 연산자를 이용해보겠음)
+```C#
+var books =
+    from book in SampleData.Books
+    group book.Title by book.IsExpensive() into bookGroup
+    select new { Expensive = bookGroup.Key, Books = bookGroup };
+ObjectDumper.Write(books, 1);
+```
+- IsExpensive 와 같은 연산자를 작성하여 사용하면 질의식에 표현해야 할 장황한 내용들을 추상화해서 간소화
+- 앞에서 설명한 연산자들은 LINQ 질의 속에서 사용가능하지만 점을 이용해서 호출하는 방법밖에 없음
+- 아주 적은 수의 질의 연산자만이 질의 표현식 구문에 따라 암시적으로 사용 가능
 
 ## 12.3 표준 질의 연산자의 사용자 정의 구현형태
+- 사용자가 직접 만든 질의 연산자를 사용하는 방법을 설명할 때, 명시적 점 표현법을 이용함 
+- [Books와 TotalPrice를 사용하는 질의식]
+```C#
+from publisher in SampleData.Publishers
+where publisher.Name.StartsWith("A")
+select new {
+    Publisher = publisher.Name,
+    TotalPrice = publisher.Books(SampleData.Books).TotalPrice()
+};
+```
+- 기본적으로 질의 표현식의 이런 구문은 표준 질의 연산자로 변환됨
+- 여기서는 Where와 Select가 질의 표현식 내부에서 호출되더라도 사용자가 구현한대로 동작할 수 있게 하는 방법을 살펴볼 것
+- 컴파일러가 질의 표현식을 처리하면서 질의 연산자들을 다루기 떄문에 구현된 표준 질의 연산자가 어떻게 사용될 것인지 정의 가능
+
+- 질의 표현식이 어떻게 메소드 호출로 변환되는지 알아보자
+- 질의 표현식을 먼저 잘 이해하자!
+- 질의 변환 매커니즘의 기초를 알고 나면 질의 표현식 패턴이 구현된 예를 살펴볼 것임!
+
 ### 12.3.1 질의 변환 메커니즘에 대한 생각
+- 컴파일러가 어떻게 질의 표현식을 메소드에 대한 호출로 변환시키는가?
+- 표준 질의 연산자를 사용자가 재구현하는 것의 기본이 되는 개념!
+```C#
+using System;
+using LinqAction.LinqBooks.Common;
+
+static class TestCustomImplementation
+{
+    static void Main()
+    {
+        var books =
+            from book in SampleData.Books
+            where book.Price < 30
+            select book.Title;
+
+        ObjectDumper.Write(books);
+    }
+}
+```
+- 질의에 의해 실제로 수행되는 코드는 사용자가 불러들이는 데 사용하는 인터페이스에 의존적임
+- 질의 연산자들이 확장 메소드이므로 네임스페이스를 통해 참조되어 있음
+- 컴파일러가 질의 표현식을 확장 메소드에 대한 호출로 변환시켜줌
+
+- 컴파일러가 수행하는 작업: Where와 Select 메소드가 어디서 왔는지 규명해내는 것
+- 만약 System.Linq를 참조한다면 컴파일러는 Where과 Select 확장 메소드를 System.Linq.Enumerable 클래스에서 찾으려고 함
+- 만약 System.Linq를 참조하지 않고 스스로 작성한 Where과 Select를 구현하는 네임스페이스를 불러들인다면 코드는 다르게 변환될 것임
+```C#
+var query =
+    System.Linq.Enumerable.Select(
+        System.LinqEnumerable.Where(
+            SampleData.Books,
+            book => book.Price < 30),
+    book => book.Title);
+```
+- 같은 질의식을 다음과 같이 변환할 수도 있음
+```C#
+var query = 
+    MyNamespace.MyExtensions.Select(
+        MyNamespace.MyExtensions.Where(
+            SampleData.Books,
+            book => book.Price < 30),
+    book => book.Title)
+```
 ### 12.3.2 질의 표현식 패턴의 기능상 정의 
+- C# 3.0 기능 정의 문서는 질의 표현식을 완벽히 지원하기 위해 어떤 연산자를 어떻게 구현해야 하는지 설명하고 있음 
+- 질의 표현식은 문법적 매핑(syntatic mapping)이라는 방법으로 메소드 호출로 변환됨 -> 질의 표현식을 구현할 떄 형은 매우 탄력적으로 사용 가능
+- 몇 가지 알아야 할 사항들:
+    - 제네릭형은 매개변수와 결과형 간의 관계를 잘 표현하기 위해 질의 표현식 패턴내에서 사용됨. 그러나 비제네릭형에 대해서도 해당 패턴을 사용하는 것이 불가능하지 않음
+    - 3장과 4장에서 설명한 표준 질의 연산자들은 IEnumerable<T>를 구현하는 어떤 형에도 대응 가능한 연산자들임. 비록 LINQ to Objects와 LINQ to XML에 표준 질의 연산자를 주로 활용하지만 IEnumerable<T>는 패턴의 일부가 아님, 이것은 LINQ가 열거형이나 시퀀스를 제외한 나머지 형들에도 활용이 가능하다는 것임 
+    - 표준 질의 연산자들은 확장 메소드의 형태로 구현되어 있찌만 패턴의 메소드들은 확장 메소드 또는 인스턴스 메소드로 구현될 수 있음(호출 방법이 일치하기 때문!)
+    - 메소드들은 대리자나 표현식 트리를 매개변수로 받아들일 수 있음
+- 어떻게 LINQ 질의 표현식 패턴을 구현하는 것이 가능한지 살펴보기 위해 다음 사항을 설명할 것임
+    - 제네릭과 비제네릭 형태로 구현된 예제
+    - IEnumerable<T>에 대해 동작하는 연산자와 다른 종류의 객체에 대해 동작하는 연산자를 만드는 방법
+    - 대리자를 받아들이는 연산자와 표현식 트리를 받아오는 연산자
+    - 확장 메소드로 구현된 연산자와 인스턴스 메소드로 구현된 연산자
+    - 모든 것을 간단히 하기 위해 Where과 Select에 대해서만 구현
+
 ### 12.3.3 예제 1: 표준 질의 연산자의 동작을 추적하기
+- Where와 Select 연산자를 직접 작성하여 사용자 정의 연산자를 구현해볼 것임
+- 구현할 메소드들은 단순히 표준의 Enumerable.Where와 Enumerable.Select에 대리자(delegate)를 연결해주는 역할만을 담당할 겅ㅁ
+- 다음 예제는 CustomImplementation이라는 클래스에 구현된 두 가지 연산자를 보여줌
+```C#
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public static class CustomImplementation
+{
+    public static IEnumerable<TSource> Where<TSource>(
+            this IEnumerable<TSource> source, Func<TSource, Boolean> predicate)
+    {
+        Console.WriteLine("in CustomImplementation.Where<TSource>");
+        return Enumerable.Where(source, predicate);
+    }
+
+    public static IEnumerable<TResult> Select<TSource, TResult>(
+            this IEnumerable<TSource> source,
+            Func<TSource, TResult> selector)
+    {
+        Console.WriteLine(
+            "in CustomImplementation.Select<TSource, TResult>");
+        return Enumerable.Select(source, selector);
+    }
+}
+```
+- 새로 구현된 두 연산자를 이용해보려면 이 클래스의 네임스페이스를 System.Linq 네임스페이스 대신 사용하면 됨
+- 방금 설명한 매커니즘의 한계를 다음 절에서 설명하겠다
+
 ### 12.3.4 제한: 질의 표현식 간의 충돌
+- 질의 표현식 패턴 구현시 염두에 두어야 하는 매우 중요한 제약: 
+    - 구현물의 시그니처가 동일할 때는 직접 구현한 연산자 이외의 기본 연산자들과 혼용할 수 없음
+    - 확장 메소드에 대한 호출이 이루어지는 방법으로 인한 제약임
+
+- 질의 표현식을 수정해서 결과를 정렬하는 경우
+```C#
+var query =
+    from Book book in SampleData.Books
+    where book.Price < 30
+    orderby book.Title
+    select book.Title;
+```
+- OrderBy라는 새로운 질의 연산자가 사용됨
+- 현재 Where과 Select만을 구현한 상태이므로 컴파일러는 OrderBy가 구현된 것을 찾을 수 없다고 에러 메세지를 반환함
+- 일반적으로 이런 상황에서는 표준 구현형태를 재사용해서 기본적인 동작을 그대로 수행하게 해주는 선택을 할 것
+- 이를 위해 System.Linq 네임스페이스를 예시 코드에 이미 정의한 네임스페이스와 함께 불러들여야 함
+- 이런 시도를 할 경우, 컴파일러가 Wehre와 Select를 구현한 두 네임스페이스 중 어떤 네임스페이스의 구현형태를 따라야 할 지 잘 모르겠다고 하면서 에러 메세지를 반환할 수도 있음
+- 이런 상황 = **네임스페이스 충돌**
+    - 확장 메소드가 호출되는 순서는 하나의 시그너처를 가지고 하나의 범주 속에서 여러 가지 확장 메소드를 다루는 것을 매우 힘들게 함
+- 그러나...이런 불명확함을 쉽게 해소할 수 있는 방법은 없음
+    - 하나의 파일 내에서 스스로 작성한 연산자만을 사용하는 것
+    - 또는 System.Linq에서 받아온 기본 연산자만을 사용하는 것
+    - 위의 둘 중 하나를 강요받게 됨
+    - 다른 옵션: 예시 코드의 연산자를 IEnumerable<T> 같이 좀더 보편적인 객체들이 아닌 IEnumerable<Book>과 같이 좀 더 제한적인 범위 내에서 사용될 수 있도록 하는 것(그러나 이 경우 각각의 형마다 매번 연산자를 작성해줘야 함 -> 부자연스럽고 귀찮다)
+- 이 Func 대리자형에 접근하기 위해 System.Linq 네임스페이스를 불러들이게 되면 대신 System.Linq.Enumerable 클래스와의 충돌로 인해 직접 작성한 표준 질의 연산자를 사용할 수 없게 될 것임
+
 ### 12.3.5 예제 2: 비제네릭인 특정 영역에 대한 연산자
+- 
 ### 12.3.6 예제 3: 비시퀀스 연산자
 
 ## 12.4 웹 서비스에 대해 질의하기: LINQ to Amazon
