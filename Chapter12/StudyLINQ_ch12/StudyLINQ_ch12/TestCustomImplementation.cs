@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace StudyLINQ_ch12
 {
@@ -11,7 +13,10 @@ namespace StudyLINQ_ch12
                 where book.Price < 30
                 select book.Title;
 
-            ObjectDumper.Write(books);
+            foreach (string book in books)
+            {
+                Console.WriteLine(book);
+            }
         }
     }
 }

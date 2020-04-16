@@ -36,10 +36,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Author.cs" />
     <Compile Include="Book.cs" />
     <Compile Include="CustomImplementation.cs" />
     <Compile Include="CustomQueryOperators.cs" />
     <Compile Include="Enumerable.cs" />
+    <Compile Include="Publisher.cs" />
+    <Compile Include="SampleData.cs" />
     <Compile Include="SumExtensions.cs" />
     <Compile Include="TestCustomImplementation.cs" />
   </ItemGroup>

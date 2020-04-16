@@ -34,11 +34,6 @@ namespace StudyLINQ_ch12
             return result;
         }
 
-        static public IEnumerable<Book> Books(this Publisher publisher, IEnumerable<Book> books)
-        {
-            return books.Where(book => book.Publisher == publihser);
-        }
-
         public static Boolean IsExpensive(this Book book)
         {
             if (book == null)
