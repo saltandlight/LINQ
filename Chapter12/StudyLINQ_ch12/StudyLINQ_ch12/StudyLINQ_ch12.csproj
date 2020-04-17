@@ -40,6 +40,7 @@
     <Compile Include="Book.cs" />
     <Compile Include="CustomImplementation.cs" />
     <Compile Include="CustomQueryOperators.cs" />
+    <Compile Include="DomainSpecificOperators.cs" />
     <Compile Include="Enumerable.cs" />
     <Compile Include="Publisher.cs" />
     <Compile Include="SampleData.cs" />

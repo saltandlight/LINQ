@@ -16,5 +16,12 @@ namespace StudyLINQ_ch12
         public string Subject { get; set; }
         public Publisher Publisher { get; set; }
         public Author[] Authors { get; set; }
+
+        public string PrintString()
+        {
+            return string.Format("Id:{0}, Isbn:{1}, Notes:{2}, PageCount:{3}, Price:{4}, Summary:{5}, PublicationDate:{6}, Title:{7}, Subject: {8}, Publisher: {9}, Authors: {10}\n",
+                                  this.BookId, this.Isbn, this.Notes, this.PageCount, this.Price, this.Summary, this.PublicationDate, this.Title, 
+                                  this.Subject, this.Publisher.toString(), this.Authors.ToString());
+        }
     }
 }

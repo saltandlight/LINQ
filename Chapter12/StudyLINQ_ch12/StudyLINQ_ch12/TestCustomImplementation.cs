@@ -6,7 +6,7 @@ namespace StudyLINQ_ch12
 {
     static class TestCustomImplementation
     {
-        static void Main()
+        static void Main2()
         {
             var books =
                 from book in SampleData.Books

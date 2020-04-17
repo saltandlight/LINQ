@@ -493,15 +493,129 @@ var query =
 
 - Book 객체에 대해 동작하는 Where와 Select 연산자를 구현할 것임
 - 앞에서 봤던 제네릭 구현형태를 첫 번째 예제로 삼아서 Book 객체에 해당하는 연산자가 각각의 책을 처리하면서 제목을 출력하게 할 것임
+- [특정 영역에 대해 구현된 Where과 Select]
+```C#
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace StudyLINQ_ch12
+{
+    static class DomainSpecificOperators
+    {
+        public static IEnumerable<Book> Where(
+            this IEnumerable<Book> source,
+            Func<Book, Boolean> predicate)
+        {
+            foreach (Book book in source)
+            {
+                Console.WriteLine(
+                    "processing book \"{0}\" in "+
+                    "DomainSpecificOperators.Where",
+                    book.Title);
+                if (predicate(book))
+                    yield return book;
+            }
+        }
+
+        public static IEnumerable<TResult> Select<TResult>(
+            this IEnumerable<Book> source, Func<Book, TResult> selector)
+        {
+            foreach (Book book in source)
+            {
+                Console.WriteLine(
+                    "processing book \"{0}\" in " +
+                    "DomainSpecificOperators.Select<TResult>",
+                    book.Title);
+                yield return selector(book);
+            }
+        }
+    }
+}
+```
+
+- 이런 예제를 재사용해보자
+```C#
+static public void Main()
+        {
+            var books =
+                from book in SampleData.Books
+                where book.Price < 30
+                select book.Title;
+
+            foreach (string book in books)
+            {
+                Console.WriteLine(book);
+            }
+            Console.ReadKey();
+        }
+```
+- ![](cap1.PNG)
+- 이런 결과를 출력함
+- 특정 영역에 대한 연산자는 어떤 형에 대해 자신들이 이 작업을 하는지 이미 알고 있음
+- 에제처럼 Title과 같은 특정 멤버에게 명시적으로 접근 가능하게 함
+
+- 이전에 언급했던 제약점은 이런 연산자에 대해서는 존재하지 않음
+- 특정 영역에 대한 연산자는 물론 원래 구현된 다른 연산자와 함께 사용 가능함
+
+- 이번 경우에는 orderby 절을 질의 내에서 사용 가능
+- OrderBy 연산자의 사용자 정의 구현형태를 작성할 필요는 없고 기본적으로 제공되는 연산자를 혼용하여 사용 가능함
+```C#
+var query =
+    from Book book in SampleData.Books
+    where book.Price < 30
+    orderby book.Title
+    select book.Title;
+```
+- 이런 형태로 혼용하여 사용하려면 사용자 정의 연산자의 네임스페이스와 기본 네임스페이스인 System.Linq 네임스페이스를 함께 참조해야 함
 
 ### 12.3.6 예제 3: 비시퀀스 연산자
+- 어떻게 개체의 객체들을 질의 속에 포함시킬 수 있는지 설명함
+- 표준 질의 연산자들은 IEnumerable<T>에 해당하는 질의 연산자 패턴의 구현형태를 제공함
+- 개발자가 SampleData.Books와 같은 Book 객체의 배열과 같은 컬렉션들에 대해 질의할 수 있게 해줌
+- 만약 사용자가 객체의 시퀀스가 아닌 하나의 객체를 가지고 작업하고 싶다면 어떻게 해야 하나?
 
-## 12.4 웹 서비스에 대해 질의하기: LINQ to Amazon
-### 12.4.1 LINQ to Amazon 소개 
-### 12.4.2 필요한 사항
-### 12.4.3 구현
+- 다음 질의에서는 특정 Publisher 객체에 작업한 후, Publisher 객체의 시퀀스에 대해 사용하는 것처럼 쓸 수 있음
+```C#
+from publisher in SampleData.Publishers[0]
+join book in SampleData.Books
+    on publisher equals book.Publisher into books
+select new { Publisher = publisher.Name, Books = books};
+```
+- 그럴싸하지만 이 상태로는 표준 질의 연산자와 함께 동작 못함 
+- 그것은 표준 질의 연산자들이 IEnumerable<T>와만 동작하도록 설계되었기 때문임
+- 이 경우에는 컴파일러가 Publisher 형에 대해 GroupJoin을 할 수 없다는 점이 문제임
 
-## 12.5 IQueryable과 IQueryProvider: 고급화된 LINQ to Amazon
-### 12.5.1 IQueryable과 IQueryProvider 인터페이스
-### 12.5.2 구현
-### 12.5.3 정확히 무슨 일이 일어나는가
+- Join 연산이 사용되기 때문에 호출되는 GroupJoin 연산자는 다음과 같이 정의되어 있음
+```C#
+public static IEnumerable<TResult>
+    GroupJoin<TOuter, TInner, TKey, TResult>(
+        this IEnumerable<TOuter> outer,
+        IEnumerable<TInner> inner, 
+        Func<TOuter, TKey> outerKeySelector,
+        Func<TOuter, TKey> innerKeySelector,
+        Func<TOuter, IEnumerable<TInner>, TResult> resultSelector)
+```
+- 매개변수 outer가 시퀀스 형태(IEnumerable<TOuter>)로 정의된 것을 알 수 있음
+- 컴파일러가 불만을 갖지 않게 하기 위해서는 GroupJoin을 새롭게 구현해서 하나의 개체를 시퀀스 대신 매개변수로 받아들이는 형태로 변형시키면 됨
+```C#
+public static IEnumerable<TResult>
+    GroupJoin<TOuter, TInner, TKey, TResult>(
+    this TOuter outer,
+    IEnumerable<TInner> inner,
+    Func<TOuter, TKey> outerKeySelector,
+    Func<TOuter, TKey> innerKeySelector,
+    Func<TOuter, IEnumerable<TInner>, TResult> resultSelector)
+{
+    ILookup<TKey, TInner> lookup =
+        inner.ToLookup(innerKeySelector);
+    yield return resultSelector(outer,
+                                lookup[outerKeySelector(outer)]);
+}
+```
+- 단순히 첫 번째 매개변수의 형을 바꾸고 코드를 하나의 객체를 다루는 형태로 적절히 수정
+
+
+- LINQ to Amazon은 그냥 읽어보자..!
