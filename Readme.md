@@ -14,4 +14,4 @@
 
 - Chapter12. LINQ 확장하기
 
-- Chapter13
+- Chapter13. 다양한 계층에서 사용되는 LINQ
