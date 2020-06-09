@@ -14,4 +14,4 @@
 ## 팁
 - 언제나 함수의 명세를 잘 확인하자!(특히 막힐 때는 이렇게 하기!)
 - 뭔가 어렵거나 복잡해보여도 좋은 아이디어가 있어보이면 시도해보기!
-참고사이트: https://docs.microsoft.com/ko-kr/dotnet/api/system.xml.linq.xelement.attribute?view=netcore-3.1
+- 참고사이트: https://docs.microsoft.com/ko-kr/dotnet/api/system.xml.linq.xelement.attribute?view=netcore-3.1
