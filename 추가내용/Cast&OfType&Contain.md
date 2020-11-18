@@ -23,3 +23,7 @@ var numlist = arr.OfType(typeof<Integer>);
 ```
 - 이 경우 numlist에는 1과 3만 담김
 - 에러날 것 없이, 내가 원하는 타입의 아이들만 골라서 담는다!!
+
+## Contain
+- 말 그대로 포함된 애들만 걸러서 가져옴
+- foreach로 같은지를 걸러줄 필요가 없이 Contain을 쓰면 해당 요소가 포함되어 있는지 알 수가 있다.
