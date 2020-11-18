@@ -1,4 +1,4 @@
-# Cast와 OfType, 의 차이
+# Cast와 OfType, Contain의 차이
 ## Cast
 - 요소들을 내가 원하는 형식을 지정해서 캐스팅함
 - 지연 실행 사용
